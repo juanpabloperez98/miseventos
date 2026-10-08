@@ -3,10 +3,9 @@
 REST API for **Mis Eventos**, an event management platform: users, events, sessions, speakers and
 attendee registrations. Built with Flask on a hexagonal (ports and adapters) architecture.
 
-> **Status — phase 1 (foundation).** The architecture, persistence layer, security infrastructure,
-> Docker environment and test suite are complete. Authentication endpoints and the public event
-> listing are implemented end to end. The rest of the business endpoints are the next phase
-> (see [Roadmap](#roadmap)).
+> **Status.** Foundation (architecture, persistence, security, Docker, tests), authentication and
+> **event management** (CRUD, status workflow, ownership, search and pagination) are implemented.
+> Sessions, speakers and registrations are next (see [Roadmap](#roadmap)).
 
 ## Tech stack
 
@@ -68,8 +67,8 @@ back/
 │   │   └── ports/             # repository / security / unit-of-work abstractions
 │   ├── application/
 │   │   ├── dto/               # commands, queries and output DTOs
-│   │   ├── services/          # AuthorizationService (RBAC)
-│   │   └── use_cases/         # auth/, events/
+│   │   ├── services/          # AuthorizationService (RBAC), EventAccessPolicy (ownership)
+│   │   └── use_cases/         # auth/, events/ (create, get, list, update, delete)
 │   ├── infrastructure/
 │   │   ├── config/            # Settings loaded from environment variables
 │   │   ├── database/          # base, session, models/, repositories/, unit_of_work
@@ -213,7 +212,33 @@ pytest --cov=app --cov-report=html     # report in htmlcov/
 | POST | `/api/auth/register` | — | Self-registration (role `ATTENDEE`) |
 | POST | `/api/auth/login` | — | Returns a JWT access token |
 | GET | `/api/auth/me` | Bearer | Current user |
-| GET | `/api/events` | — | Published events, `?search=`, `?page=`, `?per_page=` (max 100) |
+| GET | `/api/events` | optional | Paginated catalog: `?search=` (name), `?status=`, `?page=`, `?per_page=` (max 100) |
+| POST | `/api/events` | Bearer (ADMIN, ORGANIZER) | Create a `DRAFT` event owned by the caller |
+| GET | `/api/events/{id}` | optional | Event detail |
+| PUT | `/api/events/{id}` | Bearer (ADMIN, owner) | Replace editable fields and optionally change `status` |
+| DELETE | `/api/events/{id}` | Bearer (ADMIN, owner) | Delete a draft (204) or cancel a published event (200) |
+
+### Event management rules
+
+- **Creation**: only roles with the `events:manage` permission (ADMIN, ORGANIZER). `created_by` is
+  always the authenticated user and the status is always `DRAFT`. Payloads containing `id`,
+  `created_by`, `status`, `created_at` or `updated_at` are rejected with 422 (no mass assignment).
+- **Ownership**: ADMIN (`events:manage_any`) manages every event, ORGANIZER only the events they
+  created, ATTENDEE none. Enforced in the use cases through `EventAccessPolicy`, never in routes.
+- **Visibility**: anonymous users and attendees only see `PUBLISHED` events; organizers also see
+  their own events; admins see everything. Hidden events answer 404 so their existence is not
+  leaked. A supplied but invalid token always answers 401, even on public endpoints.
+- **Status workflow**: `DRAFT → PUBLISHED | CANCELLED`, `PUBLISHED → CANCELLED | COMPLETED`.
+  `CANCELLED` and `COMPLETED` are final: they cannot change status nor be edited (409).
+- **Validation**: non-blank name (≤ 200) and location (≤ 255), description ≤ 5000, integer
+  `capacity > 0` (≤ 1,000,000), timezone-aware dates with `start_date < end_date`. Dates are
+  stored and returned in UTC.
+- **Capacity**: cannot be lowered below the number of registered attendees (409). The event row
+  is locked (`SELECT … FOR UPDATE`) while it is updated.
+- **Removal**: `DRAFT` is physically deleted (204); `PUBLISHED` is cancelled instead (200 with the
+  cancelled event); `CANCELLED` and `COMPLETED` cannot be removed (409).
+- **Search**: case-insensitive partial match on the event **name**, executed in PostgreSQL with
+  bound parameters and `LIMIT/OFFSET` pagination.
 
 Errors always use the same JSON shape:
 
@@ -231,7 +256,6 @@ Ports, repositories and domain rules for these endpoints already exist; the next
 use cases and routes:
 
 ```text
-GET/PUT/DELETE /api/events/{id}, POST /api/events
 POST/DELETE    /api/events/{id}/register, GET /api/users/me/events
 GET/POST       /api/events/{event_id}/sessions, PUT/DELETE /api/sessions/{id}
 GET/POST       /api/speakers, PUT/DELETE /api/speakers/{id}
@@ -240,7 +264,7 @@ GET/POST       /api/speakers, PUT/DELETE /api/speakers/{id}
 ## Key design decisions
 
 - **Event search uses parameterized queries.** The test brief suggests building the search SQL by
-  concatenating f-strings. That would allow SQL injection, so search uses SQLAlchemy
+  concatenating f-strings. That would allow SQL injection, so the name search uses SQLAlchemy
   `icontains(..., autoescape=True)`. User input is always a bound parameter, and `%` / `_` are
   escaped. Integration tests confirm that injection payloads are treated as literal text.
 - **SHA-256 password hashing, salted.** The brief mandates `hashlib.sha256()`. Each password gets a

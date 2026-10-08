@@ -1,4 +1,8 @@
-from app.domain.ports.event_repository import EventRepository, EventSearchCriteria
+from app.domain.ports.event_repository import (
+    EventRepository,
+    EventSearchCriteria,
+    EventVisibility,
+)
 from app.domain.ports.password_hasher import PasswordHasher
 from app.domain.ports.registration_repository import RegistrationRepository
 from app.domain.ports.session_repository import SessionRepository
@@ -11,6 +15,7 @@ __all__ = [
     "AccessToken",
     "EventRepository",
     "EventSearchCriteria",
+    "EventVisibility",
     "PasswordHasher",
     "RegistrationRepository",
     "SessionRepository",

@@ -17,6 +17,22 @@ class EventCapacityExceededError(ConflictError):
     default_message = "Event has reached its capacity"
 
 
+class InvalidEventStatusTransitionError(ConflictError):
+    default_message = "Invalid event status transition"
+
+
+class EventNotEditableError(ConflictError):
+    default_message = "Cancelled or completed events cannot be modified"
+
+
+class EventCannotBeRemovedError(ConflictError):
+    default_message = "Only draft or published events can be removed"
+
+
+class EventCapacityBelowRegistrationsError(ConflictError):
+    default_message = "Capacity cannot be lower than the number of registered attendees"
+
+
 class InvalidCredentialsError(AuthenticationError):
     default_message = "Invalid email or password"
 

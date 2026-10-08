@@ -7,8 +7,27 @@ from app.domain.value_objects import Page, PageRequest
 
 
 @dataclass(frozen=True, slots=True)
+class EventVisibility:
+    include_unpublished: bool = False
+    owner_id: int | None = None
+
+    @classmethod
+    def public(cls) -> "EventVisibility":
+        return cls()
+
+    @classmethod
+    def unrestricted(cls) -> "EventVisibility":
+        return cls(include_unpublished=True)
+
+    @classmethod
+    def public_or_owned_by(cls, owner_id: int) -> "EventVisibility":
+        return cls(owner_id=owner_id)
+
+
+@dataclass(frozen=True, slots=True)
 class EventSearchCriteria:
-    text: str | None = None
+    visibility: EventVisibility
+    name: str | None = None
     status: EventStatus | None = None
 
 

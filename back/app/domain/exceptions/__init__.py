@@ -9,9 +9,13 @@ from app.domain.exceptions.base import (
 from app.domain.exceptions.business import (
     AlreadyRegisteredToEventError,
     EmailAlreadyRegisteredError,
+    EventCannotBeRemovedError,
+    EventCapacityBelowRegistrationsError,
     EventCapacityExceededError,
+    EventNotEditableError,
     EventNotOpenForRegistrationError,
     InvalidCredentialsError,
+    InvalidEventStatusTransitionError,
     InvalidTokenError,
 )
 
@@ -22,9 +26,13 @@ __all__ = [
     "ConflictError",
     "DomainError",
     "EmailAlreadyRegisteredError",
+    "EventCannotBeRemovedError",
+    "EventCapacityBelowRegistrationsError",
     "EventCapacityExceededError",
+    "EventNotEditableError",
     "EventNotOpenForRegistrationError",
     "InvalidCredentialsError",
+    "InvalidEventStatusTransitionError",
     "InvalidTokenError",
     "InvalidValueError",
     "NotFoundError",

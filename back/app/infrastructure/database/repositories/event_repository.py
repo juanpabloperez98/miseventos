@@ -1,7 +1,8 @@
-from sqlalchemy import or_, select
+from sqlalchemy import ColumnElement, or_, select
 
 from app.domain.entities import Event
-from app.domain.ports import EventRepository, EventSearchCriteria
+from app.domain.enums import EventStatus
+from app.domain.ports import EventRepository, EventSearchCriteria, EventVisibility
 from app.domain.value_objects import Page, PageRequest
 from app.infrastructure.database.models import EventModel, RegistrationModel
 from app.infrastructure.database.repositories.base import SqlAlchemyRepository
@@ -23,14 +24,11 @@ class SqlAlchemyEventRepository(SqlAlchemyRepository[Event, EventModel], EventRe
 
     def search(self, criteria: EventSearchCriteria, page: PageRequest) -> Page[Event]:
         statement = select(EventModel)
-        if criteria.text:
-            statement = statement.where(
-                or_(
-                    EventModel.name.icontains(criteria.text, autoescape=True),
-                    EventModel.description.icontains(criteria.text, autoescape=True),
-                    EventModel.location.icontains(criteria.text, autoescape=True),
-                )
-            )
+        visibility_filter = self._visibility_filter(criteria.visibility)
+        if visibility_filter is not None:
+            statement = statement.where(visibility_filter)
+        if criteria.name:
+            statement = statement.where(EventModel.name.icontains(criteria.name, autoescape=True))
         if criteria.status is not None:
             statement = statement.where(EventModel.status == criteria.status)
         return self._paginate(statement.order_by(EventModel.start_date, EventModel.id), page)
@@ -43,6 +41,15 @@ class SqlAlchemyEventRepository(SqlAlchemyRepository[Event, EventModel], EventRe
             .order_by(EventModel.start_date, EventModel.id)
         )
         return [self._to_entity(model) for model in self._session.scalars(statement)]
+
+    @staticmethod
+    def _visibility_filter(visibility: EventVisibility) -> ColumnElement[bool] | None:
+        if visibility.include_unpublished:
+            return None
+        published = EventModel.status == EventStatus.PUBLISHED
+        if visibility.owner_id is None:
+            return published
+        return or_(published, EventModel.created_by == visibility.owner_id)
 
     def _to_entity(self, model: EventModel) -> Event:
         return Event(

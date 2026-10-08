@@ -1,15 +1,52 @@
-from marshmallow import Schema, fields, validate
+from datetime import UTC
+from typing import Any
+
+from marshmallow import Schema, fields, post_load, validate
 
 from app.adapters.http.schemas.common import PageMetadataSchema, PaginationQuerySchema
 from app.domain.enums import EventStatus
+
+MAX_EVENT_CAPACITY = 1_000_000
 
 
 class EventQuerySchema(PaginationQuerySchema):
     search = fields.String(
         validate=validate.Length(max=100),
+        metadata={"description": "Case-insensitive text matched against the event name"},
+    )
+    status = fields.Enum(
+        EventStatus,
         metadata={
-            "description": "Case-insensitive text matched against name, description and location"
+            "description": "Only events in this status. Unpublished events are only "
+            "returned to users allowed to manage them"
         },
+    )
+
+
+class EventCreateSchema(Schema):
+    name = fields.String(required=True, validate=validate.Length(max=200))
+    description = fields.String(
+        allow_none=True, load_default=None, validate=validate.Length(max=5000)
+    )
+    location = fields.String(required=True, validate=validate.Length(max=255))
+    start_date = fields.AwareDateTime(required=True)
+    end_date = fields.AwareDateTime(required=True)
+    capacity = fields.Integer(
+        required=True, strict=True, validate=validate.Range(max=MAX_EVENT_CAPACITY)
+    )
+
+    @post_load
+    def normalize_dates_to_utc(self, data: dict[str, Any], **_kwargs: Any) -> dict[str, Any]:
+        for field_name in ("start_date", "end_date"):
+            data[field_name] = data[field_name].astimezone(UTC)
+        return data
+
+
+class EventUpdateSchema(EventCreateSchema):
+    status = fields.Enum(
+        EventStatus,
+        load_default=None,
+        metadata={"description": "Target status. Omit to keep the current one"},
     )
 
 

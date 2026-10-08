@@ -12,7 +12,7 @@ from app.domain.exceptions import (
     EmailAlreadyRegisteredError,
     NotFoundError,
 )
-from app.domain.ports import EventSearchCriteria
+from app.domain.ports import EventSearchCriteria, EventVisibility
 from app.domain.value_objects import PageRequest
 from app.infrastructure.database.models import EventModel
 from app.infrastructure.database.repositories import (
@@ -23,6 +23,8 @@ from app.infrastructure.database.repositories import (
     SqlAlchemyUserRepository,
 )
 from tests.factories import EVENT_START, build_event, build_session, build_user
+
+PUBLIC = EventVisibility.public()
 
 
 @pytest.fixture
@@ -134,18 +136,38 @@ class TestEventRepository:
         assert "RowShareLock" in lock_modes
         assert events.get_by_id_for_update(999_999) is None
 
-    def test_search_matches_name_description_and_location_case_insensitively(
-        self, events: SqlAlchemyEventRepository, creator: User
+    @pytest.mark.parametrize("term", ["python", "Python", "PYTHON", "thon"])
+    def test_search_matches_part_of_the_name_case_insensitively(
+        self, events: SqlAlchemyEventRepository, creator: User, term: str
     ) -> None:
-        events.add(build_event(name="PYTHON Day", created_by=creator.id))
+        for name in ["Python Conference", "Advanced python", "PYTHON Backend Workshop"]:
+            events.add(build_event(name=name, created_by=creator.id))
         events.add(build_event(name="Data", description="Using python", created_by=creator.id))
         events.add(build_event(name="Meetup", location="Python House", created_by=creator.id))
-        events.add(build_event(name="Rust", description=None, created_by=creator.id))
 
-        page = events.search(EventSearchCriteria(text="python"), PageRequest())
+        page = events.search(EventSearchCriteria(PUBLIC, name=term), PageRequest())
 
-        assert page.total == 3
-        assert {event.name for event in page.items} == {"PYTHON Day", "Data", "Meetup"}
+        assert {event.name for event in page.items} == {
+            "Python Conference",
+            "Advanced python",
+            "PYTHON Backend Workshop",
+        }
+
+    def test_visibility_restricts_unpublished_events(
+        self, events: SqlAlchemyEventRepository, users: SqlAlchemyUserRepository, creator: User
+    ) -> None:
+        other = users.add(build_user(email="other@example.com"))
+        events.add(build_event(name="Public", created_by=other.id))
+        events.add(build_event(name="Mine", created_by=creator.id, status=EventStatus.DRAFT))
+        events.add(build_event(name="Theirs", created_by=other.id, status=EventStatus.CANCELLED))
+
+        def names(visibility: EventVisibility) -> set[str]:
+            page = events.search(EventSearchCriteria(visibility), PageRequest())
+            return {event.name for event in page.items}
+
+        assert names(PUBLIC) == {"Public"}
+        assert names(EventVisibility.public_or_owned_by(creator.id)) == {"Public", "Mine"}
+        assert names(EventVisibility.unrestricted()) == {"Public", "Mine", "Theirs"}
 
     @pytest.mark.parametrize(
         "malicious", ["' OR '1'='1", "%", "_", "'; DROP TABLE events; --", "\\"]
@@ -157,7 +179,7 @@ class TestEventRepository:
         db_session: Session,
         malicious: str,
     ) -> None:
-        page = events.search(EventSearchCriteria(text=malicious), PageRequest())
+        page = events.search(EventSearchCriteria(PUBLIC, name=malicious), PageRequest())
 
         assert page.total == 0
         assert db_session.scalar(select(func.count()).select_from(EventModel)) == 1
@@ -177,7 +199,8 @@ class TestEventRepository:
         events.add(build_event(name="Hidden", created_by=creator.id, status=EventStatus.DRAFT))
 
         page = events.search(
-            EventSearchCriteria(status=EventStatus.PUBLISHED), PageRequest(page=2, per_page=2)
+            EventSearchCriteria(EventVisibility.unrestricted(), status=EventStatus.PUBLISHED),
+            PageRequest(page=2, per_page=2),
         )
 
         assert [event.name for event in page.items] == ["Event 2", "Event 3"]

@@ -9,6 +9,7 @@ from app.adapters.http.schemas.common import ErrorSchema
 
 BEARER_SCHEME_NAME = "bearerAuth"
 BEARER_SECURITY: list[dict[str, list[str]]] = [{BEARER_SCHEME_NAME: []}]
+OPTIONAL_BEARER_SECURITY: list[dict[str, list[str]]] = [{}, {BEARER_SCHEME_NAME: []}]
 
 OPENAPI_CONFIG: dict[str, Any] = {
     "API_TITLE": "Mis Eventos API",

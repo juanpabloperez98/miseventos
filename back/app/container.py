@@ -3,17 +3,24 @@ from datetime import timedelta
 
 from sqlalchemy.orm import Session
 
-from app.application.services import AuthorizationService
+from app.application.services import AuthorizationService, EventAccessPolicy
 from app.application.use_cases.auth import (
     AuthenticateUserUseCase,
     LoginUserUseCase,
     RegisterUserUseCase,
 )
-from app.application.use_cases.events import ListPublishedEventsUseCase
+from app.application.use_cases.events import (
+    CreateEventUseCase,
+    DeleteEventUseCase,
+    GetEventUseCase,
+    ListEventsUseCase,
+    UpdateEventUseCase,
+)
 from app.domain.ports import PasswordHasher, TokenService
 from app.infrastructure.config import Settings
 from app.infrastructure.database.repositories import (
     SqlAlchemyEventRepository,
+    SqlAlchemyRegistrationRepository,
     SqlAlchemyUserRepository,
 )
 from app.infrastructure.database.session import create_database_engine, create_session_factory
@@ -31,6 +38,7 @@ class Container:
             settings.jwt_secret_key, timedelta(minutes=settings.jwt_expiration_minutes)
         )
         self.authorization_service = AuthorizationService()
+        self.event_access_policy = EventAccessPolicy(self.authorization_service)
 
     def create_request_scope(self) -> "RequestScope":
         return RequestScope(self, self.session_factory())
@@ -66,8 +74,37 @@ class RequestScope:
             SqlAlchemyUserRepository(self._session), self._container.token_service
         )
 
-    def list_published_events(self) -> ListPublishedEventsUseCase:
-        return ListPublishedEventsUseCase(SqlAlchemyEventRepository(self._session))
+    def list_events(self) -> ListEventsUseCase:
+        return ListEventsUseCase(
+            SqlAlchemyEventRepository(self._session), self._container.event_access_policy
+        )
+
+    def get_event(self) -> GetEventUseCase:
+        return GetEventUseCase(
+            SqlAlchemyEventRepository(self._session), self._container.event_access_policy
+        )
+
+    def create_event(self) -> CreateEventUseCase:
+        return CreateEventUseCase(
+            SqlAlchemyEventRepository(self._session),
+            self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
+
+    def update_event(self) -> UpdateEventUseCase:
+        return UpdateEventUseCase(
+            SqlAlchemyEventRepository(self._session),
+            SqlAlchemyRegistrationRepository(self._session),
+            self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
+
+    def delete_event(self) -> DeleteEventUseCase:
+        return DeleteEventUseCase(
+            SqlAlchemyEventRepository(self._session),
+            self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
 
     def close(self) -> None:
         self._session.close()
