@@ -232,6 +232,21 @@ pytest --cov=app --cov-report=html     # report in htmlcov/
 | POST | `/api/events/{event_id}/registrations` | Bearer | Register the authenticated user to the event (201) |
 | GET | `/api/me/registrations` | Bearer | Events the authenticated user is registered to |
 
+### Authentication rules
+
+- `POST /api/auth/register` requires `name`, `email` and `password` (8–128 characters). The email
+  is normalized (trimmed, lower-cased) and must be unique (409 `Email is already registered`).
+  Public registration always creates an `ATTENDEE`; fields such as `role`, `id` or
+  `password_hash` are rejected (422). Privileged roles are managed outside the public API.
+- Passwords are hashed with `hashlib.sha256()` and a per-user random salt, never stored or
+  returned in plain text, and never logged.
+- `POST /api/auth/login` returns a JWT (`HS256`, `sub` and `role` claims, configurable expiry).
+  Unknown emails and wrong passwords get the same 401 response, and unknown emails are verified
+  against an unmatchable hash so both paths take a similar time.
+- Protected routes answer 401 when the token is missing, malformed, forged, expired or belongs to
+  a deleted user, and 403 when an authenticated user lacks the required permission. Permissions
+  use the role stored in the database, not the role claim inside the token.
+
 ### Event management rules
 
 - **Creation**: only roles with the `events:manage` permission (ADMIN, ORGANIZER). `created_by` is

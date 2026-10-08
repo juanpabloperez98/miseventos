@@ -124,6 +124,47 @@ class TestLoginUser:
             LoginUserUseCase(users, hasher, tokens).execute(LoginCommand(email, password))
 
 
+class CountingPasswordHasher(Sha256PasswordHasher):
+    def __init__(self) -> None:
+        super().__init__()
+        self.verifications = 0
+
+    def verify(self, password: str, password_hash: str) -> bool:
+        self.verifications += 1
+        return super().verify(password, password_hash)
+
+
+class TestLoginTimingProtection:
+    @pytest.mark.parametrize(
+        ("email", "password"), [("ada@example.com", "wrong-password"), ("nobody@x.io", PASSWORD)]
+    )
+    def test_every_failed_login_verifies_exactly_one_password(
+        self,
+        register: RegisterUserUseCase,
+        users: InMemoryUserRepository,
+        tokens: JwtTokenService,
+        email: str,
+        password: str,
+    ) -> None:
+        _register_ada(register)
+        hasher = CountingPasswordHasher()
+        login = LoginUserUseCase(users, hasher, tokens)
+
+        with pytest.raises(InvalidCredentialsError):
+            login.execute(LoginCommand(email, password))
+
+        assert hasher.verifications == 1
+
+    def test_unknown_email_cannot_match_the_unmatchable_hash(
+        self, users: InMemoryUserRepository, tokens: JwtTokenService
+    ) -> None:
+        login = LoginUserUseCase(users, Sha256PasswordHasher(), tokens)
+
+        for candidate in ["", PASSWORD, "dummy", "salt$digest"]:
+            with pytest.raises(InvalidCredentialsError):
+                login.execute(LoginCommand("nobody@x.io", candidate))
+
+
 class TestAuthenticateUser:
     def test_resolves_user_from_token(
         self, register: RegisterUserUseCase, users: InMemoryUserRepository, tokens: JwtTokenService
