@@ -16,6 +16,10 @@ from app.application.use_cases.events import (
     ListEventsUseCase,
     UpdateEventUseCase,
 )
+from app.application.use_cases.registrations import (
+    ListMyRegisteredEventsUseCase,
+    RegisterForEventUseCase,
+)
 from app.application.use_cases.sessions import (
     CreateSessionUseCase,
     DeleteSessionUseCase,
@@ -152,6 +156,18 @@ class RequestScope:
             self._container.event_access_policy,
             SqlAlchemyUnitOfWork(self._session),
         )
+
+    def register_for_event(self) -> RegisterForEventUseCase:
+        return RegisterForEventUseCase(
+            SqlAlchemyEventRepository(self._session),
+            SqlAlchemyRegistrationRepository(self._session),
+            self._container.authorization_service,
+            self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
+
+    def list_my_registered_events(self) -> ListMyRegisteredEventsUseCase:
+        return ListMyRegisteredEventsUseCase(SqlAlchemyEventRepository(self._session))
 
     def close(self) -> None:
         self._session.close()

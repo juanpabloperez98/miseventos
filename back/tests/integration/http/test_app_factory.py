@@ -67,6 +67,18 @@ def test_openapi_spec_documents_session_management(client: FlaskClient) -> None:
     assert {"204", "401", "403", "404", "409"} <= set(item["delete"]["responses"])
 
 
+def test_openapi_spec_documents_event_registrations(client: FlaskClient) -> None:
+    paths = client.get("/openapi.json").get_json()["paths"]
+    register = paths["/api/events/{event_id}/registrations"]["post"]
+    mine = paths["/api/me/registrations"]["get"]
+
+    assert register["security"] == [{"bearerAuth": []}]
+    assert {"201", "401", "404", "409", "422"} <= set(register["responses"])
+    assert mine["security"] == [{"bearerAuth": []}]
+    assert {"200", "401"} <= set(mine["responses"])
+    assert "parameters" not in mine
+
+
 def test_swagger_ui_is_served(client: FlaskClient) -> None:
     response = client.get("/docs")
 

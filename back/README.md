@@ -4,8 +4,9 @@ REST API for **Mis Eventos**, an event management platform: users, events, sessi
 attendee registrations. Built with Flask on a hexagonal (ports and adapters) architecture.
 
 > **Status.** Foundation (architecture, persistence, security, Docker, tests), authentication and
-> **event management** (CRUD, status workflow, ownership, search and pagination) and **session
-> management** are implemented. Speakers and registrations are next (see [Roadmap](#roadmap)).
+> **event management** (CRUD, status workflow, ownership, search and pagination), **session
+> management** and **attendee registration** are implemented. Speaker management is next (see
+> [Roadmap](#roadmap)).
 
 ## Tech stack
 
@@ -228,6 +229,8 @@ pytest --cov=app --cov-report=html     # report in htmlcov/
 | GET | `/api/sessions/{id}` | optional | Session detail |
 | PUT | `/api/sessions/{id}` | Bearer (ADMIN, event owner) | Replace the session's editable fields |
 | DELETE | `/api/sessions/{id}` | Bearer (ADMIN, event owner) | Delete the session (204) |
+| POST | `/api/events/{event_id}/registrations` | Bearer | Register the authenticated user to the event (201) |
+| GET | `/api/me/registrations` | Bearer | Events the authenticated user is registered to |
 
 ### Event management rules
 
@@ -276,13 +279,27 @@ authentication → 401, authorization → 403. Unexpected errors return
 - **Event status**: sessions of `CANCELLED` or `COMPLETED` events cannot be created, updated or
   deleted (409), the same rule that already prevents editing those events.
 
+### Attendee registration rules
+
+- The registered user is always the authenticated user; the request body must be empty and any
+  field such as `user_id` is rejected (422). `GET /api/me/registrations` takes no user parameter.
+- Events the user cannot see answer 404, exactly like `GET /api/events/{id}`. Visible events that
+  are not `PUBLISHED` answer 409 (`Event is not open for registration`).
+- A user registers at most once per event (409), enforced in the use case and by the database
+  constraint `UNIQUE(user_id, event_id)`.
+- Capacity is never exceeded (409 `Event has reached its capacity`): the use case locks the event
+  row with `SELECT … FOR UPDATE`, then checks duplicates, counts registrations and inserts in the
+  same transaction, so concurrent registrations to the same event are serialized. Each request
+  uses its own database session and unit of work. `tests/integration/database/
+  test_registration_concurrency.py` runs real concurrent transactions to verify it.
+- The list keeps events that were cancelled or completed after the user registered.
+
 ### Roadmap
 
 Ports, repositories and domain rules for these endpoints already exist; the next phase adds the
 use cases and routes:
 
 ```text
-POST/DELETE    /api/events/{id}/register, GET /api/users/me/events
 GET/POST       /api/speakers, PUT/DELETE /api/speakers/{id}
 ```
 

@@ -35,9 +35,10 @@ class InMemoryUserRepository(UserRepository):
 
 
 class InMemoryEventRepository(EventRepository):
-    def __init__(self) -> None:
+    def __init__(self, registrations: "InMemoryRegistrationRepository | None" = None) -> None:
         self._events: dict[int, Event] = {}
         self._next_id = 1
+        self._registrations = registrations
 
     def add(self, event: Event) -> Event:
         now = datetime.now(UTC)
@@ -72,7 +73,13 @@ class InMemoryEventRepository(EventRepository):
         return Page(items=items, total=len(matches), request=page)
 
     def list_by_attendee(self, user_id: int) -> list[Event]:
-        raise NotImplementedError
+        if self._registrations is None:
+            return []
+        event_ids = self._registrations.event_ids_of(user_id)
+        return sorted(
+            (event for event in self._events.values() if event.id in event_ids),
+            key=lambda event: (event.start_date, event.id or 0),
+        )
 
     @staticmethod
     def _matches(event: Event, criteria: EventSearchCriteria) -> bool:
@@ -115,6 +122,9 @@ class InMemoryRegistrationRepository(RegistrationRepository):
 
     def count_by_event(self, event_id: int) -> int:
         return sum(1 for item in self._registrations.values() if item.event_id == event_id)
+
+    def event_ids_of(self, user_id: int) -> set[int]:
+        return {item.event_id for item in self._registrations.values() if item.user_id == user_id}
 
 
 class InMemorySessionRepository(SessionRepository):
