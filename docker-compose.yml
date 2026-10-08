@@ -22,16 +22,16 @@ services:
 
   backend:
     build:
-      context: .
+      context: ./back
     env_file:
-      - .env
+      - ./back/.env
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       TEST_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}_test
     ports:
       - "${BACKEND_HOST_PORT:-5000}:5000"
     volumes:
-      - .:/app
+      - ./back:/app
     depends_on:
       postgres:
         condition: service_healthy

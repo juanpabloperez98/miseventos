@@ -87,8 +87,7 @@ back/
 ├── tests/
 │   ├── unit/                  # domain, application, infrastructure, architecture
 │   └── integration/           # HTTP API and PostgreSQL repositories
-├── Dockerfile
-├── docker-compose.yml
+├── Dockerfile               # image used by ../docker-compose.yml
 ├── alembic.ini
 └── pyproject.toml / poetry.lock
 ```
@@ -114,10 +113,12 @@ back/
 
 ## Environment variables
 
-Copy the template and adjust the values:
+Copy the templates and adjust the values. Application settings live in `back/.env`; the
+infrastructure variables consumed by Docker Compose live in the repository root `.env`:
 
 ```bash
-cp .env.example .env
+cp back/.env.example back/.env   # application settings
+cp .env.example .env             # Docker Compose (repository root)
 ```
 
 | Variable | Required | Description |
@@ -129,8 +130,8 @@ cp .env.example .env
 | `JWT_EXPIRATION_MINUTES` | no | Access token lifetime, default `60` |
 | `CORS_ORIGINS` | no | Comma-separated origins allowed on `/api/*` (e.g. the Angular dev server) |
 | `LOG_LEVEL` | no | `DEBUG`, `INFO` (default), `WARNING`, `ERROR`, `CRITICAL` |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes (Docker) | PostgreSQL container credentials |
-| `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` | no | Host ports published by Compose (defaults `5432` / `5000`) |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes (Docker) | PostgreSQL container credentials (root `.env`) |
+| `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` | no | Host ports published by Compose (root `.env`, defaults `5432` / `5000`) |
 
 The application refuses to start if a required variable is missing or invalid. Inside Docker
 Compose, `DATABASE_URL` and `TEST_DATABASE_URL` are rebuilt from the `POSTGRES_*` variables so the
@@ -138,7 +139,10 @@ backend reaches PostgreSQL through the `postgres` service name, never `localhost
 
 ## Running with Docker (recommended)
 
+Docker Compose belongs to the whole project, so run it from the repository root:
+
 ```bash
+cp back/.env.example back/.env
 cp .env.example .env
 docker compose up --build
 ```
@@ -146,6 +150,8 @@ docker compose up --build
 Compose starts PostgreSQL, waits for its health check, then starts the backend, which runs
 `alembic upgrade head` and the Flask development server with hot reload (the source folder is
 mounted into the container).
+
+All `docker compose` commands below are run from the repository root.
 
 - API: <http://localhost:5000>
 - Health: <http://localhost:5000/health>
