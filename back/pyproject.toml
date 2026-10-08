@@ -1,0 +1,66 @@
+[project]
+name = "miseventos-backend"
+version = "0.1.0"
+description = "Mis Eventos REST API built with Flask following a hexagonal architecture"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "flask (>=3.1,<4.0)",
+    "flask-smorest (>=0.47,<0.48)",
+    "flask-cors (>=6.0,<7.0)",
+    "marshmallow (>=4.0,<5.0)",
+    "sqlalchemy (>=2.1,<2.2)",
+    "alembic (>=1.20,<2.0)",
+    "psycopg[binary] (>=3.3,<4.0)",
+    "pyjwt (>=2.15,<3.0)",
+    "python-dotenv (>=1.2,<2.0)",
+]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.1"
+pytest-cov = "^7.1"
+ruff = "^0.16"
+mypy = "^2.4"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = ["error::DeprecationWarning:app.*"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "@abstractmethod"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "N", "SIM", "RUF", "S", "PT", "C4", "RET"]
+ignore = ["RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["app"]
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = ["flask_smorest.*", "flask_cors.*"]
+ignore_missing_imports = true
