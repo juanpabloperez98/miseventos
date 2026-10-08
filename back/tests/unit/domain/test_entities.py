@@ -2,7 +2,7 @@ from datetime import timedelta
 
 import pytest
 
-from app.domain.entities import Speaker
+from app.domain.entities import Session, Speaker
 from app.domain.enums import EventStatus, UserRole
 from app.domain.exceptions import (
     EventCapacityExceededError,
@@ -67,8 +67,11 @@ class TestSession:
         with pytest.raises(InvalidValueError, match="capacity"):
             build_session(capacity=0)
 
-    def test_capacity_is_optional(self) -> None:
-        assert build_session(capacity=None).capacity is None
+    def test_capacity_is_required(self) -> None:
+        values = {"event_id": 1, "title": "Talk", "start_time": EVENT_START}
+
+        with pytest.raises(TypeError, match="capacity"):
+            Session(**values, end_time=EVENT_START + timedelta(hours=1))  # type: ignore[call-arg]
 
     def test_fits_within_event_schedule(self) -> None:
         build_session().ensure_fits_within(build_event())
@@ -80,6 +83,43 @@ class TestSession:
 
         with pytest.raises(InvalidValueError, match="within the event"):
             session.ensure_fits_within(build_event())
+
+
+class TestSessionDetailsUpdate:
+    def test_returns_revalidated_copy_keeping_identity_and_event(self) -> None:
+        session = build_session(id=3, event_id=7, speaker_id=2)
+
+        updated = session.with_details(
+            title="  New title  ",
+            description=None,
+            start_time=session.start_time,
+            end_time=session.end_time,
+            capacity=5,
+            speaker_id=None,
+        )
+
+        assert (updated.id, updated.event_id) == (3, 7)
+        assert (updated.title, updated.capacity, updated.speaker_id) == ("New title", 5, None)
+        assert session.title == "Hexagonal architecture in Python"
+
+    @pytest.mark.parametrize(
+        "overrides",
+        [{"capacity": 0}, {"title": " "}, {"end_time": EVENT_START + timedelta(hours=1)}],
+    )
+    def test_rejects_invalid_changes(self, overrides: dict[str, object]) -> None:
+        session = build_session()
+        values: dict[str, object] = {
+            "title": session.title,
+            "description": session.description,
+            "start_time": session.start_time,
+            "end_time": session.end_time,
+            "capacity": session.capacity,
+            "speaker_id": session.speaker_id,
+            **overrides,
+        }
+
+        with pytest.raises(InvalidValueError):
+            session.with_details(**values)  # type: ignore[arg-type]
 
 
 class TestSpeaker:

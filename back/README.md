@@ -4,8 +4,8 @@ REST API for **Mis Eventos**, an event management platform: users, events, sessi
 attendee registrations. Built with Flask on a hexagonal (ports and adapters) architecture.
 
 > **Status.** Foundation (architecture, persistence, security, Docker, tests), authentication and
-> **event management** (CRUD, status workflow, ownership, search and pagination) are implemented.
-> Sessions, speakers and registrations are next (see [Roadmap](#roadmap)).
+> **event management** (CRUD, status workflow, ownership, search and pagination) and **session
+> management** are implemented. Speakers and registrations are next (see [Roadmap](#roadmap)).
 
 ## Tech stack
 
@@ -217,6 +217,11 @@ pytest --cov=app --cov-report=html     # report in htmlcov/
 | GET | `/api/events/{id}` | optional | Event detail |
 | PUT | `/api/events/{id}` | Bearer (ADMIN, owner) | Replace editable fields and optionally change `status` |
 | DELETE | `/api/events/{id}` | Bearer (ADMIN, owner) | Delete a draft (204) or cancel a published event (200) |
+| GET | `/api/events/{event_id}/sessions` | optional | Sessions of a visible event, ordered by start time |
+| POST | `/api/events/{event_id}/sessions` | Bearer (ADMIN, event owner) | Create a session in the event |
+| GET | `/api/sessions/{id}` | optional | Session detail |
+| PUT | `/api/sessions/{id}` | Bearer (ADMIN, event owner) | Replace the session's editable fields |
+| DELETE | `/api/sessions/{id}` | Bearer (ADMIN, event owner) | Delete the session (204) |
 
 ### Event management rules
 
@@ -250,6 +255,21 @@ Domain errors map to statuses by category: invalid value → 422, not found → 
 authentication → 401, authorization → 403. Unexpected errors return
 `{"message": "Internal server error"}` and are logged; stack traces are never returned.
 
+### Session management rules
+
+- A session always belongs to the event in the URL; `event_id` cannot be sent nor changed.
+- **Ownership is derived from the event**: whoever can manage the event (ADMIN, or the ORGANIZER
+  who created it) can manage its sessions, through the same `EventAccessPolicy`. ATTENDEE cannot.
+- **Visibility follows the event**: sessions of events the caller cannot see answer 404.
+- **Schedule**: `start_time < end_time` and the session must fit within the event
+  (`event.start_date <= start_time` and `end_time <= event.end_date`, boundaries included).
+- **Capacity**: required integer greater than zero (≤ 1,000,000). Attendee registration to
+  sessions is not part of this phase.
+- **Speaker**: optional; when `speaker_id` is sent the speaker must exist (404 otherwise).
+  Omitting it on `PUT` removes the speaker.
+- **Event status**: sessions of `CANCELLED` or `COMPLETED` events cannot be created, updated or
+  deleted (409), the same rule that already prevents editing those events.
+
 ### Roadmap
 
 Ports, repositories and domain rules for these endpoints already exist; the next phase adds the
@@ -257,7 +277,6 @@ use cases and routes:
 
 ```text
 POST/DELETE    /api/events/{id}/register, GET /api/users/me/events
-GET/POST       /api/events/{event_id}/sessions, PUT/DELETE /api/sessions/{id}
 GET/POST       /api/speakers, PUT/DELETE /api/speakers/{id}
 ```
 

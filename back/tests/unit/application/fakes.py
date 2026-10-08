@@ -1,7 +1,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from app.domain.entities import Event, Registration, User
+from app.domain.entities import Event, Registration, Session, Speaker, User
 from app.domain.enums import EventStatus
 from app.domain.exceptions import NotFoundError
 from app.domain.ports import (
@@ -9,6 +9,8 @@ from app.domain.ports import (
     EventSearchCriteria,
     EventVisibility,
     RegistrationRepository,
+    SessionRepository,
+    SpeakerRepository,
     UnitOfWork,
     UserRepository,
 )
@@ -113,6 +115,59 @@ class InMemoryRegistrationRepository(RegistrationRepository):
 
     def count_by_event(self, event_id: int) -> int:
         return sum(1 for item in self._registrations.values() if item.event_id == event_id)
+
+
+class InMemorySessionRepository(SessionRepository):
+    def __init__(self) -> None:
+        self._sessions: dict[int, Session] = {}
+        self._next_id = 1
+
+    def add(self, session: Session) -> Session:
+        stored = replace(session, id=self._next_id)
+        self._sessions[self._next_id] = stored
+        self._next_id += 1
+        return stored
+
+    def get_by_id(self, session_id: int) -> Session | None:
+        return self._sessions.get(session_id)
+
+    def update(self, session: Session) -> Session:
+        if session.id not in self._sessions:
+            raise NotFoundError.for_entity("Session")
+        self._sessions[session.id] = session
+        return session
+
+    def delete(self, session_id: int) -> None:
+        if self._sessions.pop(session_id, None) is None:
+            raise NotFoundError.for_entity("Session")
+
+    def list_by_event(self, event_id: int) -> list[Session]:
+        return sorted(
+            (session for session in self._sessions.values() if session.event_id == event_id),
+            key=lambda session: (session.start_time, session.id or 0),
+        )
+
+
+class InMemorySpeakerRepository(SpeakerRepository):
+    def __init__(self) -> None:
+        self._speakers: dict[int, Speaker] = {}
+
+    def add(self, speaker: Speaker) -> Speaker:
+        stored = replace(speaker, id=len(self._speakers) + 1)
+        self._speakers[stored.id or 0] = stored
+        return stored
+
+    def get_by_id(self, speaker_id: int) -> Speaker | None:
+        return self._speakers.get(speaker_id)
+
+    def update(self, speaker: Speaker) -> Speaker:
+        raise NotImplementedError
+
+    def delete(self, speaker_id: int) -> None:
+        raise NotImplementedError
+
+    def list_all(self, page: PageRequest) -> Page[Speaker]:
+        raise NotImplementedError
 
 
 class SpyUnitOfWork(UnitOfWork):

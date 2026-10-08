@@ -50,6 +50,10 @@ class Event:
     def is_owned_by(self, user_id: int) -> bool:
         return self.created_by == user_id
 
+    def ensure_editable(self) -> None:
+        if self.status.is_final:
+            raise EventNotEditableError()
+
     def ensure_can_accept_registration(self, registered_count: int) -> None:
         if not self.is_open_for_registration:
             raise EventNotOpenForRegistrationError()
@@ -67,8 +71,7 @@ class Event:
         capacity: int,
         registered_count: int,
     ) -> "Event":
-        if self.status.is_final:
-            raise EventNotEditableError()
+        self.ensure_editable()
         updated = replace(
             self,
             name=name,

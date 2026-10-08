@@ -13,7 +13,7 @@ from app.adapters.http.middleware import (
     optionally_authenticated,
 )
 from app.adapters.http.openapi import BEARER_SECURITY, OPTIONAL_BEARER_SECURITY
-from app.adapters.http.schemas.common import ErrorSchema
+from app.adapters.http.schemas.common import MAX_DATABASE_ID, ErrorSchema
 from app.adapters.http.schemas.events import (
     EventCreateSchema,
     EventPageSchema,
@@ -24,8 +24,6 @@ from app.adapters.http.schemas.events import (
 from app.application.dto import EventDetails, ListEventsQuery, UpdateEventCommand
 from app.domain.entities import Event
 from app.domain.value_objects import Page
-
-MAX_DATABASE_ID = 2_147_483_647
 
 blueprint = Blueprint("events", __name__, url_prefix="/api/events", description="Events")
 

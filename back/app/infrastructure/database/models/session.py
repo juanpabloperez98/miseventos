@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class SessionModel(TimestampMixin, Base):
     __tablename__ = "sessions"
     __table_args__ = (
-        CheckConstraint("capacity IS NULL OR capacity > 0", name="capacity_positive"),
+        CheckConstraint("capacity > 0", name="capacity_positive"),
         CheckConstraint("end_time > start_time", name="times_ordered"),
     )
 
@@ -27,7 +27,7 @@ class SessionModel(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text)
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    capacity: Mapped[int | None]
+    capacity: Mapped[int]
 
     event: Mapped["EventModel"] = relationship(back_populates="sessions")
     speaker: Mapped["SpeakerModel | None"] = relationship(back_populates="sessions")

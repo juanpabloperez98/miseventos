@@ -53,6 +53,20 @@ def test_openapi_spec_documents_event_management(client: FlaskClient) -> None:
     assert {"200", "404"} <= set(item["get"]["responses"])
 
 
+def test_openapi_spec_documents_session_management(client: FlaskClient) -> None:
+    paths = client.get("/openapi.json").get_json()["paths"]
+    collection = paths["/api/events/{event_id}/sessions"]
+    item = paths["/api/sessions/{session_id}"]
+
+    assert collection["post"]["security"] == [{"bearerAuth": []}]
+    assert collection["get"]["security"] == [{}, {"bearerAuth": []}]
+    assert {"201", "401", "403", "404", "409", "422"} <= set(collection["post"]["responses"])
+    assert {"200", "404"} <= set(collection["get"]["responses"])
+    assert item["get"]["security"] == [{}, {"bearerAuth": []}]
+    assert {"200", "401", "403", "404", "409", "422"} <= set(item["put"]["responses"])
+    assert {"204", "401", "403", "404", "409"} <= set(item["delete"]["responses"])
+
+
 def test_swagger_ui_is_served(client: FlaskClient) -> None:
     response = client.get("/docs")
 

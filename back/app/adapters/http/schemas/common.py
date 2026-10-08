@@ -1,8 +1,18 @@
+from datetime import UTC, datetime
+from typing import Any
+
 from marshmallow import Schema, fields, validate
 
 from app.domain.value_objects import MAX_PER_PAGE
 
 MAX_PAGE = 100_000
+MAX_DATABASE_ID = 2_147_483_647
+MAX_CAPACITY = 1_000_000
+
+
+class UtcDateTime(fields.AwareDateTime):
+    def _deserialize(self, value: Any, attr: str | None, data: Any, **kwargs: Any) -> datetime:
+        return super()._deserialize(value, attr, data, **kwargs).astimezone(UTC)
 
 
 class ErrorSchema(Schema):

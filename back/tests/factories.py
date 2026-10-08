@@ -39,6 +39,7 @@ def build_session(**overrides: Any) -> Session:
         "title": "Hexagonal architecture in Python",
         "start_time": EVENT_START + timedelta(hours=1),
         "end_time": EVENT_START + timedelta(hours=2),
+        "capacity": 30,
     }
     values.update(overrides)
     return Session(**values)

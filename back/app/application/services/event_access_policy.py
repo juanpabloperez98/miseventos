@@ -13,6 +13,9 @@ class EventAccessPolicy:
     def ensure_can_manage_events(self, actor: Actor) -> None:
         self._authorization.ensure_allowed(actor.role, Permission.MANAGE_EVENTS)
 
+    def ensure_can_manage_sessions(self, actor: Actor) -> None:
+        self._authorization.ensure_allowed(actor.role, Permission.MANAGE_SESSIONS)
+
     def can_manage(self, actor: Actor, event: Event) -> bool:
         if self._authorization.is_allowed(actor.role, Permission.MANAGE_ANY_EVENT):
             return True

@@ -16,11 +16,20 @@ from app.application.use_cases.events import (
     ListEventsUseCase,
     UpdateEventUseCase,
 )
+from app.application.use_cases.sessions import (
+    CreateSessionUseCase,
+    DeleteSessionUseCase,
+    GetSessionUseCase,
+    ListEventSessionsUseCase,
+    UpdateSessionUseCase,
+)
 from app.domain.ports import PasswordHasher, TokenService
 from app.infrastructure.config import Settings
 from app.infrastructure.database.repositories import (
     SqlAlchemyEventRepository,
     SqlAlchemyRegistrationRepository,
+    SqlAlchemySessionRepository,
+    SqlAlchemySpeakerRepository,
     SqlAlchemyUserRepository,
 )
 from app.infrastructure.database.session import create_database_engine, create_session_factory
@@ -101,6 +110,44 @@ class RequestScope:
 
     def delete_event(self) -> DeleteEventUseCase:
         return DeleteEventUseCase(
+            SqlAlchemyEventRepository(self._session),
+            self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
+
+    def list_event_sessions(self) -> ListEventSessionsUseCase:
+        return ListEventSessionsUseCase(
+            SqlAlchemySessionRepository(self._session), self.get_event()
+        )
+
+    def get_session(self) -> GetSessionUseCase:
+        return GetSessionUseCase(
+            SqlAlchemySessionRepository(self._session),
+            SqlAlchemyEventRepository(self._session),
+            self._container.event_access_policy,
+        )
+
+    def create_session(self) -> CreateSessionUseCase:
+        return CreateSessionUseCase(
+            SqlAlchemySessionRepository(self._session),
+            SqlAlchemyEventRepository(self._session),
+            SqlAlchemySpeakerRepository(self._session),
+            self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
+
+    def update_session(self) -> UpdateSessionUseCase:
+        return UpdateSessionUseCase(
+            SqlAlchemySessionRepository(self._session),
+            SqlAlchemyEventRepository(self._session),
+            SqlAlchemySpeakerRepository(self._session),
+            self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
+
+    def delete_session(self) -> DeleteSessionUseCase:
+        return DeleteSessionUseCase(
+            SqlAlchemySessionRepository(self._session),
             SqlAlchemyEventRepository(self._session),
             self._container.event_access_policy,
             SqlAlchemyUnitOfWork(self._session),

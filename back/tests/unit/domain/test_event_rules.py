@@ -75,6 +75,17 @@ class TestStatusTransitions:
         assert status.is_final is is_final
 
 
+class TestEditability:
+    @pytest.mark.parametrize("status", [EventStatus.DRAFT, EventStatus.PUBLISHED])
+    def test_open_events_are_editable(self, status: EventStatus) -> None:
+        build_event(status=status).ensure_editable()
+
+    @pytest.mark.parametrize("status", [EventStatus.CANCELLED, EventStatus.COMPLETED])
+    def test_final_events_are_not_editable(self, status: EventStatus) -> None:
+        with pytest.raises(EventNotEditableError):
+            build_event(status=status).ensure_editable()
+
+
 class TestEventDetailsUpdate:
     def test_returns_updated_copy_keeping_identity_and_owner(self) -> None:
         event = build_event(id=7, created_by=3, status=EventStatus.DRAFT)
