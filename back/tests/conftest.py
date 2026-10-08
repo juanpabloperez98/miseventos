@@ -7,7 +7,7 @@ from flask.testing import FlaskClient
 from app.bootstrap import create_app
 from app.infrastructure.config import Environment, Settings
 
-TEST_JWT_SECRET = "test-only-jwt-secret-key-with-at-least-32-chars"
+TEST_JWT_SECRET = "miseventos-test-7f3a9c2e8b1d4a6f9c5e7b2a"
 UNUSED_DATABASE_URL = "postgresql+psycopg://localhost:5432/miseventos_unused_test"
 
 
