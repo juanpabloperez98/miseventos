@@ -28,6 +28,11 @@
     font-weight: var(--font-weight-medium);
   }
 
+  &__speaker--none {
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-muted);
+  }
+
   &__description {
     color: var(--color-text-muted);
     white-space: pre-line;

@@ -1,0 +1,58 @@
+<div class="date-time" role="group" (focusout)="touch($event)">
+  <input
+    class="control date-time__date"
+    type="date"
+    [id]="inputId()"
+    [value]="date()"
+    [disabled]="disabled()"
+    [attr.min]="minDate()"
+    [attr.max]="maxDate()"
+    [attr.aria-required]="required() || null"
+    [attr.aria-invalid]="invalid() || null"
+    [attr.aria-describedby]="describedBy()"
+    (input)="update('date', $event)"
+  />
+
+  <div class="date-time__time">
+    <select
+      class="control"
+      aria-label="Hora"
+      [disabled]="disabled()"
+      [attr.aria-invalid]="invalid() || null"
+      (change)="update('hour', $event)"
+    >
+      <option value="" [selected]="hour() === ''">--</option>
+      @for (option of hours; track option) {
+        <option [value]="option" [selected]="option === hour()">{{ option }}</option>
+      }
+    </select>
+    <span class="date-time__separator" aria-hidden="true">:</span>
+    <select
+      class="control"
+      aria-label="Minutos"
+      [disabled]="disabled()"
+      [attr.aria-invalid]="invalid() || null"
+      (change)="update('minute', $event)"
+    >
+      <option value="" [selected]="minute() === ''">--</option>
+      @for (option of minutes; track option) {
+        <option [value]="option" [selected]="option === minute()">{{ option }}</option>
+      }
+    </select>
+    <select
+      class="control"
+      aria-label="AM o PM"
+      [disabled]="disabled()"
+      [attr.aria-invalid]="invalid() || null"
+      (change)="update('period', $event)"
+    >
+      <option value="" [selected]="period() === ''">--</option>
+      <option value="AM" [selected]="period() === 'AM'">AM</option>
+      <option value="PM" [selected]="period() === 'PM'">PM</option>
+    </select>
+  </div>
+</div>
+
+@if (summary(); as text) {
+  <p class="date-time__summary">{{ text }} (hora de Colombia)</p>
+}

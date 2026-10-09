@@ -77,6 +77,35 @@ describe('EventDetailPage', () => {
     expect(page().querySelector('a[href="/events"]')).not.toBeNull();
   });
 
+  it('should show the event and session schedules as dd/MM/yyyy and AM/PM in Colombia time', async () => {
+    await open(
+      // 9:00 AM on May 10 to 11:30 PM on May 10 in Bogotá (the end is May 11 in UTC).
+      buildEvent({
+        start_date: '2030-05-10T14:00:00+00:00',
+        end_date: '2030-05-11T04:30:00+00:00',
+      }),
+      [
+        buildSession({
+          id: 1,
+          start_time: '2030-05-10T15:00:00+00:00',
+          end_time: '2030-05-10T16:30:00+00:00',
+        }),
+        buildSession({
+          id: 2,
+          start_time: '2030-05-11T03:00:00+00:00',
+          end_time: '2030-05-11T04:30:00+00:00',
+        }),
+      ],
+    );
+
+    expect(textOf(page().querySelector('.facts'))).toContain('10/05/2030 · 9:00 AM – 11:30 PM');
+    const times = [...page().querySelectorAll('.session__time')].map((time) => textOf(time));
+    expect(times).toEqual(['10/05/2030 · 10:00 AM – 11:30 AM', '10/05/2030 · 10:00 PM – 11:30 PM']);
+    expect(page().querySelector('.session__time time')?.getAttribute('datetime')).toBe(
+      '2030-05-10T15:00:00+00:00',
+    );
+  });
+
   it('should show a loading state until the event arrives', async () => {
     await harness.navigateByUrl('/events/10', EventDetailPage);
     TestBed.tick();
@@ -367,32 +396,41 @@ describe('EventDetailPage', () => {
   });
 
   describe('sessions', () => {
-    const speakersPage = {
-      items: [{ id: 3, name: 'Grace Hopper', bio: null }],
-      total: 1,
-      page: 1,
-      per_page: 100,
-      pages: 1,
-    };
     const sessionItems = () => page().querySelectorAll('.session');
     const buttonIn = (root: Element, text: string) =>
       [...root.querySelectorAll<HTMLButtonElement>('button')].find(
         (button) => textOf(button) === text,
       );
 
-    it('should show speaker names, requesting them only when a session has a speaker', async () => {
-      await open(buildEvent(), [buildSession({ id: 1, speaker_id: 3 }), buildSession({ id: 2 })]);
-      const request = http.expectOne((req) => req.url === `${TEST_API_URL}/speakers`);
-      request.flush(speakersPage);
-      await harness.fixture.whenStable();
+    it('should show the speaker name from the API, or "Sin asignar" without a speaker', async () => {
+      await open(buildEvent(), [
+        buildSession({ id: 1, speaker_id: 3, speaker_name: 'Andrés Rojas' }),
+        buildSession({ id: 2 }),
+      ]);
 
-      expect(textOf(sessionItems()[0])).toContain('Ponente: Grace Hopper');
-      expect(textOf(sessionItems()[1])).not.toContain('Ponente');
+      const speakers = [...sessionItems()].map((item) => item.querySelector('.session__speaker'));
+      expect(textOf(speakers[0])).toBe('Ponente: Andrés Rojas');
+      expect(speakers[0]?.classList).not.toContain('session__speaker--none');
+      expect(textOf(speakers[1])).toBe('Ponente: Sin asignar');
+      expect(speakers[1]?.classList).toContain('session__speaker--none');
+      // Never a bare id, and no extra request to resolve names.
+      expect(textOf(sessionItems()[0])).not.toContain('Ponente: 3');
+      http.expectNone((req) => req.url.startsWith(`${TEST_API_URL}/speakers`));
     });
 
-    it('should not request speakers when no session has one', async () => {
-      await open(buildEvent(), [buildSession()]);
-      http.expectNone((req) => req.url === `${TEST_API_URL}/speakers`);
+    it('should keep the order: schedule, title, speaker, description, capacity', async () => {
+      await open(buildEvent(), [
+        buildSession({ speaker_id: 3, speaker_name: 'Andrés Rojas', description: 'Taller' }),
+      ]);
+
+      const classes = [...sessionItems()[0].children].map((child) => child.className);
+      expect(classes.slice(0, 5)).toEqual([
+        'session__time',
+        'session__title',
+        'session__speaker',
+        'session__description',
+        'session__capacity',
+      ]);
     });
 
     it('should not offer session management to attendees', async () => {

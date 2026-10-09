@@ -3,17 +3,17 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   buildEvent,
   buildSession,
+  fillDateTime,
   provideTestDependencies,
   textOf,
 } from '../../../../../testing/test-helpers';
-import { toDateTimeLocal } from '../../../../shared/utils/date-input';
 import { type SessionPayload } from '../../models/session.model';
 import { SessionForm } from './session-form';
 
-/** Event from 10:00 to 18:00 in the browser's local time. */
+/** Event from 10:00 AM to 6:00 PM in Colombia time (UTC-5), whatever the device timezone. */
 const EVENT = buildEvent({
-  start_date: new Date('2030-05-10T10:00').toISOString(),
-  end_date: new Date('2030-05-10T18:00').toISOString(),
+  start_date: '2030-05-10T15:00:00.000Z',
+  end_date: '2030-05-10T23:00:00.000Z',
   capacity: 100,
 });
 const SPEAKERS = [
@@ -38,6 +38,13 @@ describe('SessionForm', () => {
   }
 
   function fill(label: string, value: string): void {
+    const host = [...element.querySelectorAll('app-form-field')].find((candidate) =>
+      textOf(candidate.querySelector('label')).startsWith(label),
+    );
+    if (host?.querySelector('app-date-time-input')) {
+      fillDateTime(host, value);
+      return;
+    }
     const control = field(label);
     control.value = value;
     control.dispatchEvent(new Event(control instanceof HTMLSelectElement ? 'change' : 'input'));
@@ -80,8 +87,9 @@ describe('SessionForm', () => {
       'La sesión debe estar dentro del horario del evento.',
       'La sesión debe estar dentro del horario del evento.',
     ]);
-    expect(field('Inicio').getAttribute('min')).toBe('2030-05-10T10:00');
-    expect(field('Inicio').getAttribute('max')).toBe('2030-05-10T18:00');
+    expect(field('Inicio').getAttribute('min')).toBe('2030-05-10');
+    expect(field('Inicio').getAttribute('max')).toBe('2030-05-10');
+    expect(textOf(element)).toContain('Horario del evento: 10/05/2030 · 10:00 AM – 6:00 PM');
   });
 
   it('should require the end to be after the start and a positive capacity', async () => {
@@ -111,8 +119,9 @@ describe('SessionForm', () => {
       {
         title: 'Keynote',
         description: null,
-        start_time: new Date('2030-05-10T11:00').toISOString(),
-        end_time: new Date('2030-05-10T12:30').toISOString(),
+        // 11:00 AM and 12:30 PM in Bogotá.
+        start_time: '2030-05-10T16:00:00.000Z',
+        end_time: '2030-05-10T17:30:00.000Z',
         capacity: 80,
         speaker_id: 2,
       },
@@ -122,21 +131,31 @@ describe('SessionForm', () => {
   it('should prefill a session and allow removing its speaker', async () => {
     const session = buildSession({
       title: 'Signals',
-      start_time: new Date('2030-05-10T15:00').toISOString(),
-      end_time: new Date('2030-05-10T16:00').toISOString(),
+      // 3:00 PM to 4:00 PM in Bogotá.
+      start_time: '2030-05-10T20:00:00+00:00',
+      end_time: '2030-05-10T21:00:00+00:00',
       speaker_id: 1,
     });
     fixture.componentRef.setInput('session', session);
     await fixture.whenStable();
 
     expect(field('Título').value).toBe('Signals');
-    expect(field('Inicio').value).toBe(toDateTimeLocal(session.start_time));
+    expect(field('Inicio').value).toBe('2030-05-10');
+    const startTime = element.querySelectorAll('app-date-time-input')[0].querySelectorAll('select');
+    expect([...startTime].map((select) => select.selectedOptions[0]?.text)).toEqual([
+      '3',
+      '00',
+      'PM',
+    ]);
     expect(field('Ponente').value).toBe('1');
 
     fill('Ponente', '');
     await submit();
 
     expect(emitted[0].speaker_id).toBeNull();
+    // Unchanged schedule: the same instants are sent back, without any shift.
+    expect(emitted[0].start_time).toBe('2030-05-10T20:00:00.000Z');
+    expect(emitted[0].end_time).toBe('2030-05-10T21:00:00.000Z');
     expect(emitted[0].capacity).toBe(session.capacity);
   });
 
@@ -208,8 +227,8 @@ describe('SessionForm', () => {
         'session',
         buildSession({
           capacity: 200,
-          start_time: new Date('2030-05-10T15:00').toISOString(),
-          end_time: new Date('2030-05-10T16:00').toISOString(),
+          start_time: '2030-05-10T20:00:00+00:00',
+          end_time: '2030-05-10T21:00:00+00:00',
         }),
       );
       await fixture.whenStable();

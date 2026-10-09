@@ -15,8 +15,12 @@ from app.adapters.http.middleware import (
 from app.adapters.http.openapi import BEARER_SECURITY, OPTIONAL_BEARER_SECURITY
 from app.adapters.http.schemas.common import MAX_DATABASE_ID, ErrorSchema
 from app.adapters.http.schemas.sessions import SessionSchema, SessionWriteSchema
-from app.application.dto import CreateSessionCommand, SessionDetails, UpdateSessionCommand
-from app.domain.entities import Session
+from app.application.dto import (
+    CreateSessionCommand,
+    SessionDetails,
+    SessionView,
+    UpdateSessionCommand,
+)
 
 blueprint = Blueprint("sessions", __name__, url_prefix="/api", description="Event sessions")
 
@@ -34,7 +38,7 @@ class EventSessionCollection(MethodView):
     @blueprint.response(HTTPStatus.OK, SessionSchema(many=True))
     @blueprint.alt_response(HTTPStatus.UNAUTHORIZED, schema=ErrorSchema, description="Bad token")
     @blueprint.alt_response(HTTPStatus.NOT_FOUND, schema=ErrorSchema, description="Not found")
-    def get(self, event_id: int) -> list[Session]:
+    def get(self, event_id: int) -> list[SessionView]:
         return request_scope().list_event_sessions().execute(event_id, current_actor_or_none())
 
     @authenticated
@@ -53,7 +57,7 @@ class EventSessionCollection(MethodView):
     @blueprint.alt_response(
         HTTPStatus.CONFLICT, schema=ErrorSchema, description="Event cannot be modified"
     )
-    def post(self, payload: dict[str, Any], event_id: int) -> Session:
+    def post(self, payload: dict[str, Any], event_id: int) -> SessionView:
         command = CreateSessionCommand(event_id=event_id, details=SessionDetails(**payload))
         return request_scope().create_session().execute(current_actor(), command)
 
@@ -69,7 +73,7 @@ class SessionItem(MethodView):
     @blueprint.response(HTTPStatus.OK, SessionSchema)
     @blueprint.alt_response(HTTPStatus.UNAUTHORIZED, schema=ErrorSchema, description="Bad token")
     @blueprint.alt_response(HTTPStatus.NOT_FOUND, schema=ErrorSchema, description="Not found")
-    def get(self, session_id: int) -> Session:
+    def get(self, session_id: int) -> SessionView:
         return request_scope().get_session().execute(session_id, current_actor_or_none())
 
     @authenticated
@@ -87,7 +91,7 @@ class SessionItem(MethodView):
     @blueprint.alt_response(
         HTTPStatus.CONFLICT, schema=ErrorSchema, description="Event cannot be modified"
     )
-    def put(self, payload: dict[str, Any], session_id: int) -> Session:
+    def put(self, payload: dict[str, Any], session_id: int) -> SessionView:
         command = UpdateSessionCommand(session_id=session_id, details=SessionDetails(**payload))
         return request_scope().update_session().execute(current_actor(), command)
 

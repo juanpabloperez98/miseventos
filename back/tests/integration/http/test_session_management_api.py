@@ -93,6 +93,7 @@ class TestCreateSession:
         assert response.status_code == 201
         assert body["event_id"] == event_id
         assert body["speaker_id"] is None
+        assert body["speaker_name"] is None
         assert (body["title"], body["capacity"]) == ("Clean architecture", 40)
         assert {"id", "created_at", "updated_at"} <= set(body)
 
@@ -103,6 +104,7 @@ class TestCreateSession:
 
         assert response.status_code == 201
         assert response.get_json()["speaker_id"] == speaker_id
+        assert response.get_json()["speaker_name"] == "Grace Hopper"
 
     def test_dates_are_normalized_to_utc(
         self, db_client: FlaskClient, organizer: ApiUser, event_id: int
@@ -605,3 +607,39 @@ class TestSessionCapacity:
 
         assert response.status_code == 200
         assert response.get_json()["capacity"] == 100
+
+
+class TestSpeakerNameInResponses:
+    """Session responses include the speaker's name, so clients never show bare ids."""
+
+    def test_list_and_detail_include_the_speaker_name(
+        self, db_client: FlaskClient, organizer: ApiUser, event_id: int, speaker_id: int
+    ) -> None:
+        with_speaker = _create_session_id(db_client, organizer, event_id, speaker_id=speaker_id)
+        without_speaker = _create_session_id(
+            db_client,
+            organizer,
+            event_id,
+            start_time="2030-05-10T13:00:00+00:00",
+            end_time="2030-05-10T14:00:00+00:00",
+        )
+
+        listed = db_client.get(f"/api/events/{event_id}/sessions", headers=organizer.headers)
+
+        assert listed.status_code == 200
+        assert [
+            (item["id"], item["speaker_id"], item["speaker_name"]) for item in listed.get_json()
+        ] == [(with_speaker, speaker_id, "Grace Hopper"), (without_speaker, None, None)]
+        detail = db_client.get(f"/api/sessions/{with_speaker}", headers=organizer.headers)
+        assert detail.get_json()["speaker_name"] == "Grace Hopper"
+
+    def test_update_returns_the_new_speaker_name_or_none(
+        self, db_client: FlaskClient, organizer: ApiUser, event_id: int, speaker_id: int
+    ) -> None:
+        session_id = _create_session_id(db_client, organizer, event_id)
+
+        assigned = _update_session(db_client, organizer, session_id, speaker_id=speaker_id)
+        removed = _update_session(db_client, organizer, session_id, speaker_id=None)
+
+        assert assigned.get_json()["speaker_name"] == "Grace Hopper"
+        assert removed.get_json()["speaker_name"] is None

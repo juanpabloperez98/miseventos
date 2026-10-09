@@ -10,6 +10,7 @@ from app.application.dto.seeding import SeedInitialDataCommand, SeedReport, Seed
 from app.application.dto.sessions import (
     CreateSessionCommand,
     SessionDetails,
+    SessionView,
     UpdateSessionCommand,
 )
 from app.application.dto.user import UserDTO
@@ -26,6 +27,7 @@ __all__ = [
     "SeedReport",
     "SeedUser",
     "SessionDetails",
+    "SessionView",
     "UpdateEventCommand",
     "UpdateSessionCommand",
     "UserDTO",

@@ -124,13 +124,16 @@ class RequestScope:
 
     def list_event_sessions(self) -> ListEventSessionsUseCase:
         return ListEventSessionsUseCase(
-            SqlAlchemySessionRepository(self._session), self.get_event()
+            SqlAlchemySessionRepository(self._session),
+            SqlAlchemySpeakerRepository(self._session),
+            self.get_event(),
         )
 
     def get_session(self) -> GetSessionUseCase:
         return GetSessionUseCase(
             SqlAlchemySessionRepository(self._session),
             SqlAlchemyEventRepository(self._session),
+            SqlAlchemySpeakerRepository(self._session),
             self._container.event_access_policy,
         )
 

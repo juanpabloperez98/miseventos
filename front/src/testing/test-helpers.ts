@@ -90,6 +90,7 @@ export function buildSession(overrides: Partial<EventSession> = {}): EventSessio
     id: 100,
     event_id: 10,
     speaker_id: null,
+    speaker_name: null,
     title: 'Signals en profundidad',
     description: null,
     start_time: '2030-05-10T15:00:00+00:00',
@@ -97,6 +98,30 @@ export function buildSession(overrides: Partial<EventSession> = {}): EventSessio
     capacity: 60,
     ...overrides,
   };
+}
+
+/**
+ * Fills the `app-date-time-input` inside `container` with a `yyyy-MM-ddTHH:mm` value (Colombia
+ * time), choosing the date, the hour, the minutes and AM/PM like a user would.
+ */
+export function fillDateTime(container: Element, value: string): void {
+  const host = container.querySelector('app-date-time-input');
+  const date = host?.querySelector('input');
+  const [hour, minute, period] = [...(host?.querySelectorAll('select') ?? [])];
+  if (!date || !hour || !minute || !period) {
+    throw new Error('Date and time input not found');
+  }
+  const [day, time] = value.split('T');
+  const [hours, minutes] = time.split(':').map(Number);
+  date.value = day;
+  date.dispatchEvent(new Event('input'));
+  const choose = (select: HTMLSelectElement, option: string) => {
+    select.value = option;
+    select.dispatchEvent(new Event('change'));
+  };
+  choose(hour, String(hours % 12 === 0 ? 12 : hours % 12));
+  choose(minute, String(minutes).padStart(2, '0'));
+  choose(period, hours < 12 ? 'AM' : 'PM');
 }
 
 export function textOf(element: Element | null | undefined): string {

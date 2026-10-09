@@ -10,6 +10,7 @@ import {
   buildEvent,
   buildSession,
   cleanUpAuth,
+  fillDateTime,
   provideTestDependencies,
   signInAs,
   TEST_API_URL,
@@ -20,8 +21,9 @@ import { type EventModel } from '../../models/event.model';
 
 const EVENT = buildEvent({
   id: 10,
-  start_date: new Date('2030-05-10T10:00').toISOString(),
-  end_date: new Date('2030-05-10T18:00').toISOString(),
+  // 10:00 AM to 6:00 PM in Colombia time.
+  start_date: '2030-05-10T15:00:00.000Z',
+  end_date: '2030-05-10T23:00:00.000Z',
 });
 const SPEAKERS = {
   items: [{ id: 1, name: 'Ada Lovelace', bio: null }],
@@ -50,6 +52,10 @@ describe('SessionFormPage', () => {
     const found = [...page().querySelectorAll('app-form-field')].find((candidate) =>
       textOf(candidate.querySelector('label')).startsWith(label),
     );
+    if (found?.querySelector('app-date-time-input')) {
+      fillDateTime(found, value);
+      return;
+    }
     const control = found?.querySelector<HTMLInputElement>('input, textarea, select');
     control!.value = value;
     control!.dispatchEvent(new Event(control instanceof HTMLSelectElement ? 'change' : 'input'));
@@ -113,7 +119,8 @@ describe('SessionFormPage', () => {
     await harness.fixture.whenStable();
 
     expect(textOf(page().querySelector('h1'))).toBe('Editar sesión');
-    expect(page().querySelector<HTMLSelectElement>('select')?.value).toBe('1');
+    // The speaker is the last select (the schedule fields have their own hour selects).
+    expect([...page().querySelectorAll('select')].at(-1)?.value).toBe('1');
 
     await fillValidForm();
     const request = http.expectOne(`${TEST_API_URL}/sessions/100`);

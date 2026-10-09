@@ -1,11 +1,12 @@
 import logging
 
-from app.application.dto import Actor, CreateSessionCommand
+from app.application.dto import Actor, CreateSessionCommand, SessionView
 from app.application.services import EventAccessPolicy
 from app.application.use_cases.sessions._managed_session import (
     ensure_speaker_exists,
     load_event_for_session_management,
 )
+from app.application.use_cases.sessions._session_views import to_session_view
 from app.domain.entities import Session
 from app.domain.ports import EventRepository, SessionRepository, SpeakerRepository, UnitOfWork
 
@@ -27,7 +28,7 @@ class CreateSessionUseCase:
         self._access_policy = access_policy
         self._unit_of_work = unit_of_work
 
-    def execute(self, actor: Actor, command: CreateSessionCommand) -> Session:
+    def execute(self, actor: Actor, command: CreateSessionCommand) -> SessionView:
         event = load_event_for_session_management(
             self._events, self._access_policy, actor, command.event_id
         )
@@ -52,4 +53,4 @@ class CreateSessionUseCase:
             "session_created",
             extra={"session_id": created.id, "event_id": event.id, "user_id": actor.user_id},
         )
-        return created
+        return to_session_view(created, self._speakers)

@@ -29,15 +29,15 @@
 
   <app-form-field
     label="Inicio"
-    type="datetime-local"
+    type="datetime"
     [control]="form.controls.start_date"
     [required]="true"
-    hint="En tu zona horaria local."
+    hint="Hora de Colombia."
   />
 
   <app-form-field
     label="Finalización"
-    type="datetime-local"
+    type="datetime"
     [control]="form.controls.end_date"
     [required]="true"
     [messages]="messages"

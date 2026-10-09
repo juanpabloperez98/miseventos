@@ -20,8 +20,6 @@ import { type EventSession } from '../../models/session.model';
 })
 export class SessionList {
   readonly sessions = input.required<readonly EventSession[]>();
-  /** Speaker names by id (from `GET /speakers`). */
-  readonly speakerNames = input<ReadonlyMap<number, string>>(new Map());
   /** The current user can create, edit and delete the sessions of this event. */
   readonly manageable = input(false);
   /** Session whose deletion is in progress. */

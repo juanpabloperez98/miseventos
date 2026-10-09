@@ -67,6 +67,12 @@ describe('EventListPage', () => {
     expect(cards.length).toBe(2);
     expect(textOf(cards[0])).toContain('Angular Summit');
     expect(textOf(cards[0])).toContain('Medellín');
+    // 14:00-22:00 UTC is 9:00 AM-5:00 PM in Colombia.
+    expect(textOf(cards[0].querySelector('.card__meta'))).toContain(
+      '10/05/2030 · 9:00 AM – 5:00 PM',
+    );
+    expect(textOf(cards[0].querySelector('.card__day'))).toBe('10');
+    expect(textOf(cards[0].querySelector('.card__month'))).toBe('may');
     expect(textOf(page().querySelector('.results-header__count'))).toBe('2 eventos');
   });
 

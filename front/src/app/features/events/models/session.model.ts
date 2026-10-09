@@ -1,12 +1,13 @@
 /**
  * `SessionSchema` returned by `GET /events/{event_id}/sessions`.
  *
- * Only the `speaker_id` is included; the speaker's name comes from `GET /speakers`.
+ * Includes the assigned speaker's name (`speaker_name`, `null` when there is no speaker).
  */
 export interface EventSession {
   id: number;
   event_id: number;
   speaker_id: number | null;
+  speaker_name: string | null;
   title: string;
   description: string | null;
   start_time: string;

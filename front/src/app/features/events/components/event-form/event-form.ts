@@ -18,7 +18,8 @@ import {
   FormField,
   type FormFieldOption,
 } from '../../../../shared/components/form-field/form-field';
-import { fromDateTimeLocal, toDateTimeLocal } from '../../../../shared/utils/date-input';
+import { fromColombiaInput, toColombiaInput } from '../../../../shared/utils/date-time';
+import { INVALID_CONTROL_SELECTOR } from '../../../../shared/utils/forms';
 import { compareWithSibling, integer, notBlank } from '../../../../shared/utils/validators';
 import {
   availableStatuses,
@@ -103,8 +104,8 @@ export class EventForm {
               name: event.name,
               description: event.description ?? '',
               location: event.location,
-              start_date: toDateTimeLocal(event.start_date),
-              end_date: toDateTimeLocal(event.end_date),
+              start_date: toColombiaInput(event.start_date),
+              end_date: toColombiaInput(event.end_date),
               capacity: event.capacity,
               status: event.status,
             }
@@ -138,8 +139,8 @@ export class EventForm {
       name: value.name.trim(),
       description: description === '' ? null : description,
       location: value.location.trim(),
-      start_date: fromDateTimeLocal(value.start_date),
-      end_date: fromDateTimeLocal(value.end_date),
+      start_date: fromColombiaInput(value.start_date),
+      end_date: fromColombiaInput(value.end_date),
       capacity: Number(value.capacity),
     };
     const event = this.event();
@@ -151,8 +152,6 @@ export class EventForm {
   }
 
   private focusFirstInvalid(): void {
-    this.host.nativeElement
-      .querySelector<HTMLElement>('.ng-invalid:is(input, textarea, select)')
-      ?.focus();
+    this.host.nativeElement.querySelector<HTMLElement>(INVALID_CONTROL_SELECTOR)?.focus();
   }
 }

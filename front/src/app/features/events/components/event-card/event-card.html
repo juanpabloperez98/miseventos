@@ -1,8 +1,8 @@
 <article class="card">
   <header class="card__band">
     <time class="card__date" [attr.datetime]="event().start_date">
-      <span class="card__day">{{ event().start_date | date: 'd' }}</span>
-      <span class="card__month">{{ event().start_date | date: 'MMM' }}</span>
+      <span class="card__day">{{ event().start_date | appDate: 'day' }}</span>
+      <span class="card__month">{{ event().start_date | appDate: 'month' }}</span>
     </time>
     <app-event-status-badge [status]="event().status" />
   </header>

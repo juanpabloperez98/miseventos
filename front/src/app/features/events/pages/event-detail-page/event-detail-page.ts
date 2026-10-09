@@ -39,7 +39,6 @@ import { type EventModel, isEventEditable, removalAction } from '../../models/ev
 import { type EventSession } from '../../models/session.model';
 import { EventsService } from '../../services/events.service';
 import { SessionsService } from '../../services/sessions.service';
-import { SpeakersService } from '../../services/speakers.service';
 
 /** Whether the signed-in user is registered to the event, from `GET /me/registrations`. */
 type Membership = 'anonymous' | 'checking' | 'registered' | 'not-registered';
@@ -80,7 +79,6 @@ export class EventDetailPage {
   private readonly events = inject(EventsService);
   private readonly registrations = inject(RegistrationsService);
   private readonly sessionsService = inject(SessionsService);
-  private readonly speakers = inject(SpeakersService);
   private readonly auth = inject(AuthService);
   private readonly authorization = inject(AuthorizationService);
   private readonly flashMessages = inject(FlashMessageService);
@@ -161,27 +159,6 @@ export class EventDetailPage {
     source: this.viewKey,
     computation: () => null,
   });
-
-  /** Speaker names are only requested (once) when some session has a speaker. */
-  private readonly needsSpeakers = computed(() => {
-    const state = this.loadedSessions();
-    return state.status === 'success' && state.data.some((session) => session.speaker_id !== null);
-  });
-
-  protected readonly speakerNames = toSignal(
-    toObservable(this.needsSpeakers).pipe(
-      switchMap((needed) =>
-        needed
-          ? this.speakers.listAll().pipe(
-              map((list) => new Map(list.map((speaker) => [speaker.id, speaker.name]))),
-              // Without names the list still shows that the session has a speaker.
-              catchError(() => of(new Map<number, string>())),
-            )
-          : of(new Map<number, string>()),
-      ),
-    ),
-    { initialValue: new Map<number, string>() },
-  );
 
   protected readonly event = computed(() => {
     const state = this.eventState();

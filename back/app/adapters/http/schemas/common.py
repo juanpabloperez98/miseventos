@@ -11,6 +11,18 @@ MAX_CAPACITY = 1_000_000
 
 
 class UtcDateTime(fields.AwareDateTime):
+    """Instant exchanged as ISO 8601 in UTC.
+
+    Input must include an offset (naive values are rejected) and is normalized to UTC. Output is
+    converted to UTC too, so the API does not depend on the timezone of the database session
+    (PostgreSQL returns ``timestamptz`` values in the session ``TimeZone``).
+    """
+
+    def _serialize(self, value: datetime | None, attr: str | None, obj: Any, **kwargs: Any) -> Any:
+        if value is not None and value.tzinfo is not None:
+            value = value.astimezone(UTC)
+        return super()._serialize(value, attr, obj, **kwargs)
+
     def _deserialize(self, value: Any, attr: str | None, data: Any, **kwargs: Any) -> datetime:
         return super()._deserialize(value, attr, data, **kwargs).astimezone(UTC)
 

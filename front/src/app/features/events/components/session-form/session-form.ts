@@ -25,7 +25,8 @@ import {
   type FormFieldOption,
 } from '../../../../shared/components/form-field/form-field';
 import { DateRangePipe } from '../../../../shared/pipes/date-range.pipe';
-import { fromDateTimeLocal, toDateTimeLocal } from '../../../../shared/utils/date-input';
+import { INVALID_CONTROL_SELECTOR } from '../../../../shared/utils/forms';
+import { fromColombiaInput, toColombiaInput } from '../../../../shared/utils/date-time';
 import { compareWithSibling, integer, notBlank } from '../../../../shared/utils/validators';
 import { type EventModel } from '../../models/event.model';
 import { type EventSession, SESSION_LIMITS, type SessionPayload } from '../../models/session.model';
@@ -60,10 +61,10 @@ export class SessionForm {
   private readonly fb = inject(NonNullableFormBuilder);
   protected readonly limits = SESSION_LIMITS;
 
-  /** Event schedule as `datetime-local` values, used for validation and the input bounds. */
+  /** Event schedule in Colombia time (`yyyy-MM-ddTHH:mm`), used for validation and the input bounds. */
   protected readonly bounds = computed(() => ({
-    min: toDateTimeLocal(this.event().start_date),
-    max: toDateTimeLocal(this.event().end_date),
+    min: toColombiaInput(this.event().start_date),
+    max: toColombiaInput(this.event().end_date),
   }));
 
   /** A session cannot hold more people than its event (same rule as the backend). */
@@ -155,8 +156,8 @@ export class SessionForm {
           ? {
               title: session.title,
               description: session.description ?? '',
-              start_time: toDateTimeLocal(session.start_time),
-              end_time: toDateTimeLocal(session.end_time),
+              start_time: toColombiaInput(session.start_time),
+              end_time: toColombiaInput(session.end_time),
               capacity: session.capacity,
               speaker_id: session.speaker_id === null ? '' : String(session.speaker_id),
             }
@@ -185,9 +186,7 @@ export class SessionForm {
     }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.host.nativeElement
-        .querySelector<HTMLElement>('.ng-invalid:is(input, textarea, select)')
-        ?.focus();
+      this.host.nativeElement.querySelector<HTMLElement>(INVALID_CONTROL_SELECTOR)?.focus();
       return;
     }
     const value = this.form.getRawValue();
@@ -195,8 +194,8 @@ export class SessionForm {
     this.save.emit({
       title: value.title.trim(),
       description: description === '' ? null : description,
-      start_time: fromDateTimeLocal(value.start_time),
-      end_time: fromDateTimeLocal(value.end_time),
+      start_time: fromColombiaInput(value.start_time),
+      end_time: fromColombiaInput(value.end_time),
       capacity: Number(value.capacity),
       speaker_id: value.speaker_id === '' ? null : Number(value.speaker_id),
     });

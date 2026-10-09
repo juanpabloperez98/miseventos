@@ -367,7 +367,7 @@ pytest --cov=app --cov-report=html     # report in htmlcov/
   `CANCELLED` and `COMPLETED` are final: they cannot change status nor be edited (409).
 - **Validation**: non-blank name (≤ 200) and location (≤ 255), description ≤ 5000, integer
   `capacity > 0` (≤ 1,000,000), timezone-aware dates with `start_date < end_date`. Dates are
-  stored and returned in UTC.
+  stored and returned in UTC (see [Dates and timezones](#dates-and-timezones)).
 - **Capacity**: cannot be lowered below the number of registered attendees (409). The event row
   is locked (`SELECT … FOR UPDATE`) while it is updated.
 - **Removal**: `DRAFT` is physically deleted (204); `PUBLISHED` is cancelled instead (200 with the
@@ -414,6 +414,20 @@ authentication → 401, authorization → 403. Unexpected errors return
   uses its own database session and unit of work. `tests/integration/database/
   test_registration_concurrency.py` runs real concurrent transactions to verify it.
 - The list keeps events that were cancelled or completed after the user registered.
+
+### Dates and timezones
+
+- Every date column is `timestamptz` (`DateTime(timezone=True)`): event and session schedules,
+  `registered_at`, `created_at` and `updated_at` are instants. There are no naive timestamps nor
+  date-only columns.
+- The API only accepts dates with an offset (`2030-10-10T14:30:00-05:00`, `…Z`); naive values are
+  rejected with 422. Input is normalized to UTC and every date is returned as ISO 8601 in UTC
+  (`+00:00`), whatever the `TimeZone` of the PostgreSQL session (`UtcDateTime` in
+  `adapters/http/schemas/common.py`).
+- The server timezone is not changed: the Docker containers and PostgreSQL run in UTC, and the code
+  never relies on it (`datetime.now(UTC)`, never a naive `datetime.now()`). Audit timestamps come from
+  PostgreSQL `now()`, which is an instant as well.
+- Presentation is the frontend's job: it shows instants in Colombia time (`America/Bogota`).
 
 ### Roadmap
 

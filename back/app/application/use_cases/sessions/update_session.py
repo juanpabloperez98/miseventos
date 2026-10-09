@@ -1,12 +1,12 @@
 import logging
 
-from app.application.dto import Actor, UpdateSessionCommand
+from app.application.dto import Actor, SessionView, UpdateSessionCommand
 from app.application.services import EventAccessPolicy
 from app.application.use_cases.sessions._managed_session import (
     ensure_speaker_exists,
     load_session_for_management,
 )
-from app.domain.entities import Session
+from app.application.use_cases.sessions._session_views import to_session_view
 from app.domain.ports import EventRepository, SessionRepository, SpeakerRepository, UnitOfWork
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class UpdateSessionUseCase:
         self._access_policy = access_policy
         self._unit_of_work = unit_of_work
 
-    def execute(self, actor: Actor, command: UpdateSessionCommand) -> Session:
+    def execute(self, actor: Actor, command: UpdateSessionCommand) -> SessionView:
         session, event = load_session_for_management(
             self._sessions, self._events, self._access_policy, actor, command.session_id
         )
@@ -51,4 +51,4 @@ class UpdateSessionUseCase:
             "session_updated",
             extra={"session_id": saved.id, "event_id": event.id, "user_id": actor.user_id},
         )
-        return saved
+        return to_session_view(saved, self._speakers)

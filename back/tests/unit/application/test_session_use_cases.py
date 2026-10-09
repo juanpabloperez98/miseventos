@@ -7,6 +7,7 @@ from app.application.dto import (
     Actor,
     CreateSessionCommand,
     SessionDetails,
+    SessionView,
     UpdateSessionCommand,
 )
 from app.application.services import AuthorizationService, EventAccessPolicy
@@ -128,8 +129,11 @@ class TestCreateSession:
         created = create.execute(actor, CreateSessionCommand(event.id or 0, _details()))
 
         assert created.id is not None
-        assert sessions.get_by_id(created.id) == created
+        stored = sessions.get_by_id(created.id)
+        assert stored is not None
+        assert SessionView.from_session(stored) == created
         assert (created.event_id, created.speaker_id, created.capacity) == (event.id, None, 40)
+        assert created.speaker_name is None
         assert unit_of_work.commits == 1
 
     def test_creates_session_with_speaker(
@@ -140,6 +144,7 @@ class TestCreateSession:
         )
 
         assert created.speaker_id == speaker.id
+        assert created.speaker_name == "Grace Hopper"
 
     def test_session_may_span_the_whole_event(
         self, create: CreateSessionUseCase, event: Event
@@ -254,18 +259,20 @@ class TestGetAndListSessions:
         self,
         sessions: InMemorySessionRepository,
         events: InMemoryEventRepository,
+        speakers: InMemorySpeakerRepository,
         policy: EventAccessPolicy,
     ) -> GetSessionUseCase:
-        return GetSessionUseCase(sessions, events, policy)
+        return GetSessionUseCase(sessions, events, speakers, policy)
 
     @pytest.fixture
     def list_sessions(
         self,
         sessions: InMemorySessionRepository,
         events: InMemoryEventRepository,
+        speakers: InMemorySpeakerRepository,
         policy: EventAccessPolicy,
     ) -> ListEventSessionsUseCase:
-        return ListEventSessionsUseCase(sessions, GetEventUseCase(events, policy))
+        return ListEventSessionsUseCase(sessions, speakers, GetEventUseCase(events, policy))
 
     @pytest.mark.parametrize("actor", [None, ATTENDEE, OTHER_ORGANIZER])
     def test_sessions_of_unpublished_events_are_hidden(
@@ -290,8 +297,9 @@ class TestGetAndListSessions:
         event: Event,
         actor: Actor,
     ) -> None:
-        assert get_session.execute(session.id or 0, actor) == session
-        assert list_sessions.execute(event.id or 0, actor) == [session]
+        view = SessionView.from_session(session)
+        assert get_session.execute(session.id or 0, actor) == view
+        assert list_sessions.execute(event.id or 0, actor) == [view]
 
     def test_sessions_of_published_events_are_public(
         self,
@@ -308,8 +316,37 @@ class TestGetAndListSessions:
             build_session(event_id=published.id, start_time=_at(1), end_time=_at(2))
         )
 
-        assert get_session.execute(late.id or 0) == late
-        assert list_sessions.execute(published.id or 0) == [early, late]
+        assert get_session.execute(late.id or 0) == SessionView.from_session(late)
+        assert list_sessions.execute(published.id or 0) == [
+            SessionView.from_session(early),
+            SessionView.from_session(late),
+        ]
+
+    def test_includes_the_speaker_name_and_none_without_speaker(
+        self,
+        get_session: GetSessionUseCase,
+        list_sessions: ListEventSessionsUseCase,
+        sessions: InMemorySessionRepository,
+        speakers: InMemorySpeakerRepository,
+        event: Event,
+    ) -> None:
+        grace = speakers.add(Speaker(name="Grace Hopper"))
+        with_speaker = sessions.add(
+            build_session(
+                event_id=event.id, speaker_id=grace.id, start_time=_at(1), end_time=_at(2)
+            )
+        )
+        without_speaker = sessions.add(
+            build_session(event_id=event.id, start_time=_at(3), end_time=_at(4))
+        )
+
+        listed = list_sessions.execute(event.id or 0, OWNER)
+
+        assert [(view.id, view.speaker_id, view.speaker_name) for view in listed] == [
+            (with_speaker.id, grace.id, "Grace Hopper"),
+            (without_speaker.id, None, None),
+        ]
+        assert get_session.execute(with_speaker.id or 0, OWNER).speaker_name == "Grace Hopper"
 
     def test_unknown_session_or_event(
         self, get_session: GetSessionUseCase, list_sessions: ListEventSessionsUseCase
@@ -346,6 +383,7 @@ class TestUpdateSession:
         updated = update.execute(actor, UpdateSessionCommand(session.id or 0, details))
 
         assert (updated.title, updated.capacity, updated.speaker_id) == ("Renamed", 15, speaker.id)
+        assert updated.speaker_name == speaker.name
         assert (updated.id, updated.event_id) == (session.id, session.event_id)
         assert unit_of_work.commits == 1
 

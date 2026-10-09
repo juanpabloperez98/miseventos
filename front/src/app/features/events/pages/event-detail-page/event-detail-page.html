@@ -165,7 +165,6 @@
     } @else {
       <app-session-list
         [sessions]="sessions.data"
-        [speakerNames]="speakerNames()"
         [manageable]="canEdit()"
         [removingId]="removingSessionId()"
         (remove)="removeSession($event)"

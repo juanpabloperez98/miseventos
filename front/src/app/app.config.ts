@@ -1,6 +1,6 @@
 import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import localeEs from '@angular/common/locales/es';
+import localeEsCo from '@angular/common/locales/es-CO';
 import {
   type ApplicationConfig,
   inject,
@@ -15,8 +15,9 @@ import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { provideSessionExpiryRedirect } from './core/auth/session-expiry';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { APP_LOCALE } from './shared/utils/date-time';
 
-registerLocaleData(localeEs);
+registerLocaleData(localeEsCo);
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -29,7 +30,7 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
     ),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
-    { provide: LOCALE_ID, useValue: 'es' },
+    { provide: LOCALE_ID, useValue: APP_LOCALE },
     // Restore the session of this tab before the first navigation, so guards see the real state.
     provideAppInitializer(() => inject(AuthService).restoreSession()),
     // Sends the user to the login page if the session ends while on a protected page.

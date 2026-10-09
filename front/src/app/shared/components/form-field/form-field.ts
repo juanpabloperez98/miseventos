@@ -4,9 +4,11 @@ import { type FormControl, ReactiveFormsModule } from '@angular/forms';
 import { startWith, switchMap } from 'rxjs';
 
 import { validationMessage } from '../../utils/validation-messages';
+import { DateTimeInput } from '../date-time-input/date-time-input';
 
+/** `datetime`: date and 12-hour time in Colombia time (`yyyy-MM-ddTHH:mm` value). */
 export type FormFieldType =
-  'text' | 'email' | 'password' | 'number' | 'datetime-local' | 'textarea' | 'select';
+  'text' | 'email' | 'password' | 'number' | 'datetime' | 'textarea' | 'select';
 
 export interface FormFieldOption {
   value: string;
@@ -22,7 +24,7 @@ let nextId = 0;
  */
 @Component({
   selector: 'app-form-field',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DateTimeInput],
   templateUrl: './form-field.html',
   styleUrl: './form-field.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

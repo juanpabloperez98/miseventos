@@ -1,5 +1,6 @@
 from marshmallow import Schema, fields, validate
 
+from app.adapters.http.schemas.common import UtcDateTime
 from app.domain.enums import UserRole
 
 PASSWORD_LENGTH = validate.Length(min=8, max=128)
@@ -19,7 +20,7 @@ class LoginRequestSchema(Schema):
 class AccessTokenSchema(Schema):
     access_token = fields.String(required=True, attribute="value")
     token_type = fields.String(required=True, metadata={"example": "Bearer"})
-    expires_at = fields.AwareDateTime(required=True)
+    expires_at = UtcDateTime(required=True)
 
 
 class UserSchema(Schema):
@@ -27,5 +28,5 @@ class UserSchema(Schema):
     name = fields.String(required=True)
     email = fields.Email(required=True)
     role = fields.Enum(UserRole, required=True)
-    created_at = fields.AwareDateTime()
-    updated_at = fields.AwareDateTime()
+    created_at = UtcDateTime()
+    updated_at = UtcDateTime()

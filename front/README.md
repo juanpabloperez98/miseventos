@@ -82,9 +82,9 @@ front/
 │   │   │   ├── interceptors/   # authInterceptor (Bearer solo hacia la API)
 │   │   │   └── services/       # FlashMessageService (aviso de un solo uso entre páginas)
 │   │   ├── shared/             # Reutilizable y sin lógica de negocio
-│   │   │   ├── components/     # button, form-field, loading, empty-state, error-state, alert, pagination
-│   │   │   ├── pipes/          # dateRange
-│   │   │   └── utils/          # RequestState, validadores, mensajes de validación, fechas de formulario
+│   │   │   ├── components/     # button, form-field, date-time-input, loading, empty-state, error-state, alert, pagination
+│   │   │   ├── pipes/          # appDate, dateRange
+│   │   │   └── utils/          # RequestState, validadores, mensajes de validación, fechas y horas (date-time)
 │   │   ├── layout/
 │   │   │   ├── components/     # site-header (navegación responsive y sesión), site-footer
 │   │   │   └── layouts/main-layout/
@@ -434,12 +434,29 @@ estados.
 
 ### Componentes compartidos
 
-| Componente                                                       | Uso                                                                                                                                                              |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `button[appButton]`, `a[appButton]`                              | Variantes `primary/secondary/ghost/danger/inverse`, tamaño y `loading` (spinner + `aria-busy`). Conserva la semántica nativa                                     |
-| `app-form-field`                                                 | Etiqueta, control (`text`, `email`, `password`, `number`, `datetime-local`, `textarea`, `select`), ayuda y error enlazados con `aria-describedby`/`aria-invalid` |
-| `app-pagination`                                                 | Paginación del servidor: emite la página pedida; el estado vive en la URL                                                                                        |
-| `app-loading`, `app-empty-state`, `app-error-state`, `app-alert` | Estados de interfaz                                                                                                                                              |
+| Componente                                                       | Uso                                                                                                                                                        |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `button[appButton]`, `a[appButton]`                              | Variantes `primary/secondary/ghost/danger/inverse`, tamaño y `loading` (spinner + `aria-busy`). Conserva la semántica nativa                               |
+| `app-form-field`                                                 | Etiqueta, control (`text`, `email`, `password`, `number`, `datetime`, `textarea`, `select`), ayuda y error enlazados con `aria-describedby`/`aria-invalid` |
+| `app-pagination`                                                 | Paginación del servidor: emite la página pedida; el estado vive en la URL                                                                                  |
+| `app-loading`, `app-empty-state`, `app-error-state`, `app-alert` | Estados de interfaz                                                                                                                                        |
+
+### Fechas y horas
+
+Toda la lógica temporal vive en `shared/utils/date-time.ts` (sin dependencias, sobre `Intl`):
+
+- Se muestran siempre en la zona de Colombia (`America/Bogota`) y con la configuración regional
+  `es-CO`, sea cual sea la zona del dispositivo. No se suman ni restan horas a mano: el desfase sale
+  de la base de datos de zonas horarias del navegador.
+- Formatos: fecha `dd/MM/yyyy` (`10/10/2026`), hora `h:mm a` (`2:45 PM`) y fecha y hora
+  `dd/MM/yyyy, h:mm a`. En plantillas: `value | appDate: 'date' | 'time' | 'datetime'` y
+  `start | dateRange: end`. No se usa el pipe `date` de Angular, que depende de la zona del dispositivo.
+- La API intercambia instantes ISO 8601 (el backend responde en UTC). Los formularios editan la hora
+  de Colombia (`toColombiaInput` / `fromColombiaInput`) y envían de nuevo un instante UTC.
+- Las fechas civiles sin hora (`2026-10-10`) no se convierten de zona, para que no cambien de día.
+- `app-form-field type="datetime"` usa `app-date-time-input`: fecha nativa más hora, minutos y AM/PM
+  en selectores, porque `datetime-local` y `time` siguen la configuración del navegador y pueden
+  mostrar 24 horas. El valor del control sigue siendo `yyyy-MM-ddTHH:mm`.
 
 ## Pruebas
 

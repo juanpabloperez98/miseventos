@@ -33,6 +33,17 @@
       }
     </select>
   }
+  @case ('datetime') {
+    <app-date-time-input
+      [inputId]="fieldId()"
+      [formControl]="control()"
+      [min]="min()?.toString()"
+      [max]="max()?.toString()"
+      [required]="required()"
+      [invalid]="!!errorMessage()"
+      [describedBy]="describedBy()"
+    />
+  }
   @case ('number') {
     <input
       class="control"
