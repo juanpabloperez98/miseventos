@@ -1,0 +1,46 @@
+<a class="back-link" [routerLink]="['/events', id()]">
+  <span aria-hidden="true">←</span> Volver al evento
+</a>
+
+<header class="page-header">
+  <h1>Editar evento</h1>
+</header>
+
+@let current = state();
+
+@if (current.status === 'loading') {
+  <app-loading label="Cargando evento…" />
+} @else if (current.status === 'error') {
+  @if (current.error.status === 404) {
+    <app-empty-state
+      title="Evento no encontrado"
+      message="El evento no existe o no está disponible para tu cuenta."
+    >
+      <a appButton routerLink="/events" variant="secondary">Ver todos los eventos</a>
+    </app-empty-state>
+  } @else {
+    <app-error-state
+      title="No se pudo cargar el evento"
+      [message]="describe(current.error)"
+      (retry)="retry()"
+    />
+  }
+} @else if (blockedReason(); as reason) {
+  <app-error-state title="No puedes editar este evento" [message]="reason" [retryable]="false">
+    <a appButton [routerLink]="['/events', current.data.id]" variant="secondary"> Ver el evento </a>
+  </app-error-state>
+} @else {
+  <div class="panel">
+    @if (error(); as message) {
+      <app-alert type="error">{{ message }}</app-alert>
+    }
+    <app-event-form
+      submitLabel="Guardar cambios"
+      [event]="current.data"
+      [submitting]="submitting()"
+      [serverErrors]="fieldErrors()"
+      (save)="update($event)"
+      (cancelled)="cancel()"
+    />
+  </div>
+}

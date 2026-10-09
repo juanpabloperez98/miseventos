@@ -1,0 +1,163 @@
+import { HttpTestingController, type TestRequest } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+
+import { type User } from '../../../../core/auth/auth.models';
+import {
+  BlankPage,
+  buildEvent,
+  buildPage,
+  cleanUpAuth,
+  provideTestDependencies,
+  signInAs,
+  TEST_API_URL,
+  TEST_USERS,
+  textOf,
+} from '../../../../../testing/test-helpers';
+import { EventListPage } from './event-list-page';
+
+describe('EventListPage', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+
+  const page = () => harness.routeNativeElement as HTMLElement;
+  const listRequest = (): TestRequest => {
+    TestBed.tick();
+    return http.expectOne((req) => req.url === `${TEST_API_URL}/events`);
+  };
+  const settle = () => harness.fixture.whenStable();
+
+  async function open(url = '/events', user?: User): Promise<void> {
+    if (user) {
+      signInAs(user);
+    }
+    await harness.navigateByUrl(url, EventListPage);
+  }
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: provideTestDependencies([
+        { path: 'events', component: EventListPage },
+        { path: 'events/:id', component: BlankPage },
+      ]),
+    });
+    harness = await RouterTestingHarness.create();
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => cleanUpAuth());
+
+  it('should show a loading state and then the event cards', async () => {
+    await open();
+    const request = listRequest();
+    expect(page().querySelector('app-loading')).not.toBeNull();
+
+    request.flush(
+      buildPage([
+        buildEvent({ id: 1, name: 'Angular Summit' }),
+        buildEvent({ id: 2, name: 'PyCon' }),
+      ]),
+    );
+    await settle();
+
+    expect(page().querySelector('app-loading')).toBeNull();
+    const cards = page().querySelectorAll('app-event-card');
+    expect(cards.length).toBe(2);
+    expect(textOf(cards[0])).toContain('Angular Summit');
+    expect(textOf(cards[0])).toContain('Medellín');
+    expect(textOf(page().querySelector('.results-header__count'))).toBe('2 eventos');
+  });
+
+  it('should request the page and search from the URL', async () => {
+    await open('/events?page=3&search=angular');
+
+    const request = listRequest();
+    expect(request.request.params.get('page')).toBe('3');
+    expect(request.request.params.get('per_page')).toBe('9');
+    expect(request.request.params.get('search')).toBe('angular');
+    request.flush(buildPage([], { page: 3 }));
+  });
+
+  it('should show an empty state when there are no events', async () => {
+    await open();
+    listRequest().flush(buildPage([]));
+    await settle();
+
+    expect(textOf(page().querySelector('app-empty-state'))).toContain('Todavía no hay eventos');
+  });
+
+  it('should show an error state and retry', async () => {
+    await open();
+    listRequest().flush({ message: 'Internal server error' }, { status: 500, statusText: 'Error' });
+    await settle();
+
+    const error = page().querySelector('app-error-state');
+    expect(textOf(error)).toContain('No se pudieron cargar los eventos');
+
+    error?.querySelector('button')?.click();
+    listRequest().flush(buildPage([buildEvent()]));
+    await settle();
+
+    expect(page().querySelectorAll('app-event-card').length).toBe(1);
+  });
+
+  it('should navigate to the selected page with server-side pagination', async () => {
+    await open();
+    listRequest().flush(buildPage([buildEvent()], { total: 30, pages: 4 }));
+    await settle();
+
+    page().querySelector<HTMLButtonElement>('button[aria-label="Página 2"]')?.click();
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe('/events?page=2');
+    const request = listRequest();
+    expect(request.request.params.get('page')).toBe('2');
+    request.flush(buildPage([buildEvent()], { page: 2, total: 30, pages: 4 }));
+  });
+
+  it('should put the search term in the URL', async () => {
+    await open();
+    listRequest().flush(buildPage([]));
+    await settle();
+
+    const input = page().querySelector<HTMLInputElement>('#event-search');
+    input!.value = 'python';
+    input!.dispatchEvent(new Event('input'));
+    page().querySelector<HTMLFormElement>('form[role="search"]')?.requestSubmit();
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe('/events?search=python');
+    listRequest().flush(buildPage([]));
+  });
+
+  describe('create event button', () => {
+    const createButton = () => page().querySelector('a[href="/events/new"]');
+
+    async function openAs(user?: User): Promise<void> {
+      await open('/events', user);
+      listRequest().flush(buildPage([]));
+      await settle();
+    }
+
+    it('should be hidden for anonymous users', async () => {
+      await openAs();
+      expect(createButton()).toBeNull();
+    });
+
+    it('should be hidden for ATTENDEE', async () => {
+      await openAs(TEST_USERS.attendee);
+      expect(createButton()).toBeNull();
+    });
+
+    it('should be visible for ORGANIZER', async () => {
+      await openAs(TEST_USERS.organizer);
+      expect(createButton()).not.toBeNull();
+    });
+
+    it('should be visible for ADMIN', async () => {
+      await openAs(TEST_USERS.admin);
+      expect(createButton()).not.toBeNull();
+    });
+  });
+});

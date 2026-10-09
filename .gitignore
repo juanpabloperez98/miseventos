@@ -12,3 +12,12 @@ docker-compose.override.yml
 *.swp
 .DS_Store
 Thumbs.db
+
+# TLS material and other private keys (never versioned; provide them on the server)
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs
+*.log

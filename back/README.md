@@ -22,7 +22,7 @@ attendee registrations. Built with Flask on a hexagonal (ports and adapters) arc
 | Dependency management | Poetry 2 |
 | Tests | Pytest + pytest-cov |
 | Quality | Ruff (lint + format), mypy (strict) |
-| Runtime | Docker + Docker Compose (local development) |
+| Runtime | Docker + Docker Compose; Flask dev server (development) or Gunicorn (production) |
 
 ## Architecture
 
@@ -128,13 +128,13 @@ cp .env.example .env             # Docker Compose (repository root)
 | `FLASK_ENV` | no | `development` (default), `testing` or `production` |
 | `DATABASE_URL` | yes | SQLAlchemy URL, e.g. `postgresql+psycopg://user:pass@localhost:5432/miseventos` |
 | `TEST_DATABASE_URL` | for integration tests | Must point to a database whose name ends in `_test` (created automatically) |
-| `JWT_SECRET_KEY` | yes | At least 32 characters |
+| `JWT_SECRET_KEY` | yes | At least 32 characters. In production it must also contain no placeholder (`replace-with`, `change-me`) and at least 16 distinct characters; generate it with `secrets.token_urlsafe(48)` |
 | `JWT_EXPIRATION_MINUTES` | no | Access token lifetime, default `60` |
 | `CORS_ORIGINS` | no | Comma-separated origins allowed on `/api/*` (e.g. the Angular dev server) |
 | `LOG_LEVEL` | no | `DEBUG`, `INFO` (default), `WARNING`, `ERROR`, `CRITICAL` |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes (Docker) | PostgreSQL container credentials (root `.env`) |
 | `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` | no | Host ports published by Compose (root `.env`, defaults `5432` / `5000`) |
-| `SEED_*` | no | Initial data seeder, see [Seed data](#seed-data) |
+| `SEED_*` | no | Initial data seeder, see [Seed data](#seed-data). Any `SEED_*_ENABLED=true` with `FLASK_ENV=production` is a configuration error |
 
 The application refuses to start if a required variable is missing or invalid. Inside Docker
 Compose, `DATABASE_URL` and `TEST_DATABASE_URL` are rebuilt from the `POSTGRES_*` variables so the
@@ -150,8 +150,8 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Compose starts PostgreSQL and waits for its health check. The backend container then runs, in
-order and stopping at the first failure:
+Compose starts PostgreSQL and waits for its health check. The backend container then runs
+`scripts/start.sh`, in order and stopping at the first failure:
 
 1. `alembic upgrade head` — apply migrations.
 2. `flask --app app.bootstrap:create_app seed-initial-data` — create missing seed data (see
@@ -161,6 +161,12 @@ order and stopping at the first failure:
 
 If migrations or seeding fail, the container exits with a non-zero code instead of serving a
 half-initialized API.
+
+With `FLASK_ENV=production` (set by `../docker-compose.prod.yml`), step 2 is skipped (the seeder
+refuses to run in production) and step 3 is replaced by Gunicorn
+(`gunicorn 'app.bootstrap:create_app()'`, `GUNICORN_WORKERS` default 2). The production image is
+built with `INSTALL_DEV=false`, so it has no dev dependencies. See the repository root `README.md`
+for the full stack, including the Angular frontend.
 
 All `docker compose` commands below are run from the repository root.
 
@@ -277,7 +283,9 @@ never runs from `create_app()`, so tests, other CLI commands and the reloader ne
 ### Production protection
 
 The command refuses to run when `FLASK_ENV=production`. It exits with a non-zero code and makes no
-database changes. Do not enable seed users with known passwords in any shared environment.
+database changes. In addition, loading the settings with `FLASK_ENV=production` fails if any
+`SEED_*_ENABLED` is true, so neither the API nor any `flask` command starts with seeding enabled in
+production; `../docker-compose.prod.yml` forces all of them to `false`. Do not enable seed users with known passwords in any shared environment.
 
 ## Migrations
 
@@ -454,6 +462,7 @@ GET/POST       /api/speakers, PUT/DELETE /api/speakers/{id}
   sets `sessions.speaker_id` to `NULL`.
 - **Structured logging**: JSON lines on stdout. Every record carries the telemetry namespace
   `miseventos.events.v1`. Passwords, tokens and secrets are never logged.
-- **Development-only Docker setup**: Flask development server with hot reload, migrations and
-  idempotent seeding on start-up. A production setup (WSGI server, `docker-compose.prod.yml`) is out of scope for this
-  phase.
+- **One image, two modes**: by default the container runs migrations, idempotent seeding and the
+  Flask development server with hot reload. `docker-compose.prod.yml` switches to
+  `FLASK_ENV=production`: migrations and Gunicorn, no seeding, no dev dependencies, no source mount
+  and no published port (the API is reached through the frontend's Nginx proxy).

@@ -1,0 +1,34 @@
+<article class="card">
+  <header class="card__band">
+    <time class="card__date" [attr.datetime]="event().start_date">
+      <span class="card__day">{{ event().start_date | date: 'd' }}</span>
+      <span class="card__month">{{ event().start_date | date: 'MMM' }}</span>
+    </time>
+    <app-event-status-badge [status]="event().status" />
+  </header>
+
+  <div class="card__body">
+    <h3 class="card__title">
+      <a class="card__link" [routerLink]="['/events', event().id]">{{ event().name }}</a>
+    </h3>
+
+    @if (event().description) {
+      <p class="card__description">{{ event().description }}</p>
+    }
+
+    <dl class="card__meta">
+      <div>
+        <dt>Fecha</dt>
+        <dd>{{ event().start_date | dateRange: event().end_date }}</dd>
+      </div>
+      <div>
+        <dt>Ubicación</dt>
+        <dd>{{ event().location }}</dd>
+      </div>
+      <div>
+        <dt>Capacidad</dt>
+        <dd>{{ event().capacity | number }} personas</dd>
+      </div>
+    </dl>
+  </div>
+</article>

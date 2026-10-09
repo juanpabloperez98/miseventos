@@ -1,0 +1,58 @@
+<div class="auth">
+  <aside class="auth__aside">
+    <h2>Únete a Mis Eventos</h2>
+    <p>Crea tu cuenta de asistente para descubrir eventos y consultar su agenda.</p>
+  </aside>
+
+  <section class="auth__main" aria-labelledby="register-title">
+    <h1 id="register-title" class="auth__title">Crear cuenta</h1>
+
+    @if (error(); as message) {
+      <app-alert type="error">{{ message }}</app-alert>
+    }
+
+    <form class="auth__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-form-field
+        label="Nombre"
+        autocomplete="name"
+        [control]="form.controls.name"
+        [required]="true"
+        [maxLength]="120"
+      />
+      <app-form-field
+        label="Correo electrónico"
+        type="email"
+        autocomplete="email"
+        [control]="form.controls.email"
+        [required]="true"
+      />
+      <app-form-field
+        label="Contraseña"
+        type="password"
+        autocomplete="new-password"
+        hint="Entre 8 y 128 caracteres."
+        [control]="form.controls.password"
+        [required]="true"
+      />
+      <app-form-field
+        label="Confirmar contraseña"
+        type="password"
+        autocomplete="new-password"
+        [control]="form.controls.confirmPassword"
+        [messages]="confirmMessages"
+        [required]="true"
+      />
+      <button
+        appButton
+        type="submit"
+        [block]="true"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+      >
+        {{ submitting() ? 'Creando cuenta…' : 'Crear cuenta' }}
+      </button>
+    </form>
+
+    <p class="auth__switch">¿Ya tienes cuenta? <a routerLink="/auth/login">Inicia sesión</a></p>
+  </section>
+</div>

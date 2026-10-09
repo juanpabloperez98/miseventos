@@ -346,6 +346,26 @@ docs = ["alabaster (==1.0.0)", "sphinx (==9.1.0)", "sphinx-issues (==6.0.0)"]
 tests = ["PyYAML (==6.0.3)", "apispec (==6.10.0)", "coverage (==7.13.5)", "flask[async] (==3.1.3)", "marshmallow", "packaging (>=24.2)", "pytest (==9.0.2)", "pytest-cov (==7.0.0)", "webargs (==8.7.1)", "werkzeug (==3.1.6)"]
 
 [[package]]
+name = "gunicorn"
+version = "26.2.0"
+description = "WSGI HTTP Server for UNIX"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "gunicorn-26.2.0-py3-none-any.whl", hash = "sha256:bd249d0b3f7972f7432f0a6b6ff3b3ee2d129f70cd1ff6c09a9dd9e29a2b88e3"},
+    {file = "gunicorn-26.2.0.tar.gz", hash = "sha256:62b864895d9ebff0b2f9867ba04fe811c93121596540830c9c916d0769668447"},
+]
+
+[package.extras]
+fast = ["gunicorn_h1c (>=0.6.9)"]
+gevent = ["gevent (>=24.10.1)", "packaging"]
+http2 = ["h2 (>=4.4.1)"]
+setproctitle = ["setproctitle"]
+testing = ["coverage", "gevent (>=24.10.1)", "h2 (>=4.4.1)", "httpx[http2] (>=0.23.0)", "inotify (>=0.2.10) ; sys_platform == \"linux\"", "packaging", "pytest (>=9.0.3)", "pytest-asyncio", "pytest-cov", "uvloop (>=0.19.0)"]
+tornado = ["tornado (>=6.5.7)"]
+
+[[package]]
 name = "iniconfig"
 version = "2.3.1"
 description = "brain-dead simple config-ini parsing"
@@ -1259,4 +1279,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "5bdb727731823740d022793202e0186c5720c7bb7600239e367d912f0ae2696f"
+content-hash = "dc0e9e79f76e582bc492a68269f620c49e14dc27465adfe57d588a8ea10fc7bd"

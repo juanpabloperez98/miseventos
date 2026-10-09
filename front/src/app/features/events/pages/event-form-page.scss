@@ -1,0 +1,39 @@
+// Shared layout of the create and edit pages.
+@use 'mixins' as mx;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 52rem;
+
+  @include mx.container;
+}
+
+.page-header {
+  display: grid;
+  gap: var(--space-2);
+
+  &__lead {
+    color: var(--color-text-muted);
+  }
+}
+
+.back-link {
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.panel {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+
+  @include mx.respond-to(md) {
+    padding: var(--space-7);
+  }
+}

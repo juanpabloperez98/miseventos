@@ -1,0 +1,42 @@
+@if (pages() > 1) {
+  <nav class="pagination" [attr.aria-label]="label()">
+    <button
+      type="button"
+      class="pagination__step"
+      [disabled]="page() <= 1"
+      (click)="go(page() - 1)"
+    >
+      <span aria-hidden="true">←</span> Anterior
+    </button>
+
+    <ol class="pagination__pages">
+      @for (item of items(); track item.kind === 'page' ? item.page : item.key) {
+        <li>
+          @if (item.kind === 'page') {
+            <button
+              type="button"
+              class="pagination__page"
+              [class.pagination__page--current]="item.page === page()"
+              [attr.aria-current]="item.page === page() ? 'page' : null"
+              [attr.aria-label]="'Página ' + item.page"
+              (click)="go(item.page)"
+            >
+              {{ item.page }}
+            </button>
+          } @else {
+            <span class="pagination__gap" aria-hidden="true">…</span>
+          }
+        </li>
+      }
+    </ol>
+
+    <button
+      type="button"
+      class="pagination__step"
+      [disabled]="page() >= pages()"
+      (click)="go(page() + 1)"
+    >
+      Siguiente <span aria-hidden="true">→</span>
+    </button>
+  </nav>
+}

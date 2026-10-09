@@ -1,0 +1,170 @@
+// Global tokens, moderate reset and base element styles.
+// Loaded once from src/styles.scss. Do not import this file from components.
+
+@use 'sass:map';
+@use 'variables' as vars;
+@use 'mixins' as mx;
+
+// ---------------------------------------------------------------------------
+// Design tokens as CSS custom properties
+// ---------------------------------------------------------------------------
+:root {
+  @each $name, $value in vars.$colors {
+    --color-#{$name}: #{$value};
+  }
+
+  --font-family-base: #{vars.$font-family-base};
+  --font-family-mono: #{vars.$font-family-mono};
+
+  @each $name, $value in vars.$font-sizes {
+    --font-size-#{$name}: #{$value};
+  }
+  @each $name, $value in vars.$font-weights {
+    --font-weight-#{$name}: #{$value};
+  }
+  @each $name, $value in vars.$line-heights {
+    --line-height-#{$name}: #{$value};
+  }
+  @each $name, $value in vars.$spacing {
+    --space-#{$name}: #{$value};
+  }
+  @each $name, $value in vars.$radii {
+    --radius-#{$name}: #{$value};
+  }
+  @each $name, $value in vars.$shadows {
+    --shadow-#{$name}: #{$value};
+  }
+
+  --border-width: #{vars.$border-width};
+  --gradient-brand: #{vars.$gradient-brand};
+
+  color-scheme: light;
+}
+
+// ---------------------------------------------------------------------------
+// Moderate reset
+// ---------------------------------------------------------------------------
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+picture,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+// ---------------------------------------------------------------------------
+// Typographic hierarchy
+// ---------------------------------------------------------------------------
+h1,
+h2,
+h3,
+h4 {
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+h1 {
+  font-size: var(--font-size-4xl);
+}
+
+h2 {
+  font-size: var(--font-size-3xl);
+}
+
+h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+h4 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+small {
+  font-size: var(--font-size-sm);
+}
+
+code {
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+}
+
+a {
+  color: var(--color-primary);
+  text-underline-offset: 0.2em;
+
+  &:hover {
+    color: var(--color-primary-hover);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+// Visible focus for keyboard users only.
+:focus-visible {
+  @include mx.focus-ring;
+}
+
+.visually-hidden {
+  @include mx.visually-hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,48 @@
+// Shared look of the empty and error states.
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-5);
+  border: var(--border-width) dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.panel--error {
+  border-style: solid;
+  border-color: #f3c4c4;
+  background: var(--color-danger-subtle);
+
+  .icon {
+    background: #fde2e2;
+    color: var(--color-danger);
+  }
+}
+
+.title {
+  font-size: var(--font-size-lg);
+}
+
+.message {
+  max-width: 36rem;
+  color: var(--color-text-muted);
+}
+
+.actions:not(:empty) {
+  margin-top: var(--space-2);
+}

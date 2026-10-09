@@ -1,0 +1,24 @@
+@use 'mixins' as mx;
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+
+  @include mx.respond-to(md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  &__full {
+    grid-column: 1 / -1;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: var(--border-width) solid var(--color-border);
+  }
+}

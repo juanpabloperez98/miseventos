@@ -1,0 +1,73 @@
+<form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-form-field
+    class="form__full"
+    label="Nombre del evento"
+    [control]="form.controls.name"
+    [required]="true"
+    [maxLength]="limits.nameMaxLength"
+    placeholder="Ej.: Encuentro de desarrollo web"
+  />
+
+  <app-form-field
+    class="form__full"
+    label="Descripción"
+    type="textarea"
+    [control]="form.controls.description"
+    [rows]="5"
+    [maxLength]="limits.descriptionMaxLength"
+    hint="Opcional. Cuéntale a los asistentes de qué trata el evento."
+  />
+
+  <app-form-field
+    class="form__full"
+    label="Ubicación"
+    [control]="form.controls.location"
+    [required]="true"
+    [maxLength]="limits.locationMaxLength"
+    placeholder="Lugar, ciudad"
+  />
+
+  <app-form-field
+    label="Inicio"
+    type="datetime-local"
+    [control]="form.controls.start_date"
+    [required]="true"
+    hint="En tu zona horaria local."
+  />
+
+  <app-form-field
+    label="Finalización"
+    type="datetime-local"
+    [control]="form.controls.end_date"
+    [required]="true"
+    [messages]="messages"
+  />
+
+  <app-form-field
+    label="Capacidad"
+    type="number"
+    [control]="form.controls.capacity"
+    [required]="true"
+    [min]="1"
+    [max]="limits.capacityMax"
+    [messages]="messages"
+    hint="Número máximo de asistentes."
+  />
+
+  @if (event()) {
+    <app-form-field
+      label="Estado"
+      type="select"
+      [control]="form.controls.status"
+      [options]="statusOptions()"
+      hint="Solo se muestran los cambios de estado permitidos."
+    />
+  }
+
+  <div class="form__actions form__full">
+    <button appButton type="button" variant="ghost" (click)="cancelled.emit()">Cancelar</button>
+    <button appButton type="submit" [loading]="submitting()" [disabled]="submitting()">
+      {{ submitting() ? 'Guardando…' : submitLabel() }}
+    </button>
+  </div>
+</form>

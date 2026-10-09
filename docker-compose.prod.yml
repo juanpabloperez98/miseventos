@@ -1,0 +1,36 @@
+# Production overrides, applied on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# - Backend: FLASK_ENV=production → migrations + Gunicorn (no Flask dev server, no seeding),
+#   image without dev dependencies, no source mount, not published on the host.
+# - PostgreSQL: not published on the host; reachable only inside the Docker network.
+# - Frontend: the only public entry point (Nginx serves Angular and proxies /api/).
+services:
+  postgres:
+    ports: !reset []
+
+  backend:
+    # Separate tag so the production image does not replace the development one.
+    image: miseventos-backend:prod
+    build:
+      args:
+        INSTALL_DEV: "false"
+    environment:
+      FLASK_ENV: production
+      # Seeding is forbidden in production: forced off here, and the backend refuses to start
+      # (ConfigurationError) if any of these is enabled in a production environment.
+      SEED_ADMIN_ENABLED: "false"
+      SEED_ORGANIZER_ENABLED: "false"
+      SEED_ATTENDEE_ENABLED: "false"
+      SEED_DEMO_DATA_ENABLED: "false"
+    ports: !reset []
+    volumes: !reset []
+
+
+  frontend:
+    environment:
+      # HTTPS behind an external TLS proxy that sets X-Forwarded-Proto (see README "HTTPS").
+      # 1 = redirect requests the proxy reports as plain HTTP; never affects internal traffic.
+      HTTPS_REDIRECT: "0"
+      # e.g. "max-age=300" once HTTPS works; sent only on HTTPS responses. Empty = disabled.
+      HSTS_HEADER: ""

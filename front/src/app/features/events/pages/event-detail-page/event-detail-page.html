@@ -1,0 +1,140 @@
+<a class="back-link" routerLink="/events"><span aria-hidden="true">←</span> Volver a eventos</a>
+
+@let eventStatus = eventState();
+
+@if (eventStatus.status === 'loading') {
+  <app-loading label="Cargando evento…" />
+} @else if (eventStatus.status === 'error') {
+  @if (eventStatus.error.status === 404) {
+    <app-empty-state
+      title="Evento no encontrado"
+      message="El evento no existe o no está disponible para tu cuenta."
+    >
+      <a appButton routerLink="/events" variant="secondary">Ver todos los eventos</a>
+    </app-empty-state>
+  } @else {
+    <app-error-state
+      title="No se pudo cargar el evento"
+      [message]="describe(eventStatus.error)"
+      (retry)="retryEvent()"
+    />
+  }
+} @else {
+  @let item = eventStatus.data;
+
+  @if (notice(); as message) {
+    <app-alert class="notice" [type]="message.type">{{ message.text }}</app-alert>
+  }
+
+  <article class="event" aria-labelledby="event-title">
+    <header class="event__header">
+      <app-event-status-badge [status]="item.status" />
+      <h1 id="event-title" class="event__title">{{ item.name }}</h1>
+
+      @if (canEdit() || removal()) {
+        <div class="event__actions">
+          @if (canEdit()) {
+            <a appButton variant="inverse" [routerLink]="['/events', item.id, 'edit']">
+              Editar evento
+            </a>
+          }
+          @if (removal() && !confirmingRemoval()) {
+            <button appButton type="button" variant="secondary" (click)="askRemoval()">
+              {{ removal() === 'delete' ? 'Eliminar borrador' : 'Cancelar evento' }}
+            </button>
+          }
+        </div>
+      }
+    </header>
+
+    @if (confirmingRemoval()) {
+      <section class="confirm" role="alertdialog" aria-labelledby="confirm-title">
+        <h2 id="confirm-title" class="confirm__title">
+          {{ removal() === 'delete' ? '¿Eliminar este borrador?' : '¿Cancelar este evento?' }}
+        </h2>
+        <p>
+          @if (removal() === 'delete') {
+            El borrador se eliminará de forma permanente junto con sus sesiones.
+          } @else {
+            El evento pasará a estado «Cancelado». Esta acción no se puede deshacer.
+          }
+        </p>
+        @if (removalError(); as error) {
+          <app-alert type="error">{{ error }}</app-alert>
+        }
+        <div class="confirm__actions">
+          <button
+            appButton
+            type="button"
+            variant="ghost"
+            [disabled]="removing()"
+            (click)="confirmingRemoval.set(false)"
+          >
+            Volver
+          </button>
+          <button
+            appButton
+            type="button"
+            variant="danger"
+            [loading]="removing()"
+            [disabled]="removing()"
+            (click)="confirmRemoval()"
+          >
+            {{ removal() === 'delete' ? 'Sí, eliminar' : 'Sí, cancelar evento' }}
+          </button>
+        </div>
+      </section>
+    }
+
+    <div class="event__body">
+      <dl class="facts">
+        <div class="facts__item">
+          <dt>Fecha</dt>
+          <dd>
+            <time [attr.datetime]="item.start_date">{{
+              item.start_date | dateRange: item.end_date
+            }}</time>
+          </dd>
+        </div>
+        <div class="facts__item">
+          <dt>Ubicación</dt>
+          <dd>{{ item.location }}</dd>
+        </div>
+        <div class="facts__item">
+          <dt>Capacidad</dt>
+          <dd>{{ item.capacity | number }} personas</dd>
+        </div>
+      </dl>
+
+      <section class="description" aria-labelledby="description-title">
+        <h2 id="description-title" class="section-title">Acerca del evento</h2>
+        @if (item.description) {
+          <p class="description__text">{{ item.description }}</p>
+        } @else {
+          <p class="muted">Este evento no tiene descripción.</p>
+        }
+      </section>
+    </div>
+  </article>
+
+  <section class="sessions" aria-labelledby="sessions-title">
+    <h2 id="sessions-title" class="section-title">Sesiones</h2>
+    @let sessions = sessionsState();
+    @if (sessions.status === 'loading') {
+      <app-loading label="Cargando sesiones…" />
+    } @else if (sessions.status === 'error') {
+      <app-error-state
+        title="No se pudieron cargar las sesiones"
+        [message]="describe(sessions.error)"
+        (retry)="retrySessions()"
+      />
+    } @else if (sessions.data.length === 0) {
+      <app-empty-state
+        title="Sin sesiones programadas"
+        message="Este evento todavía no tiene sesiones en su agenda."
+      />
+    } @else {
+      <app-session-list [sessions]="sessions.data" />
+    }
+  </section>
+}

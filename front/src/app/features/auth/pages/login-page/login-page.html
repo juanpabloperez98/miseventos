@@ -1,0 +1,47 @@
+<div class="auth">
+  <aside class="auth__aside">
+    <h2>Hola de nuevo</h2>
+    <p>Inicia sesión para gestionar tus eventos y seguir la agenda de los que te interesan.</p>
+  </aside>
+
+  <section class="auth__main" aria-labelledby="login-title">
+    <h1 id="login-title" class="auth__title">Iniciar sesión</h1>
+
+    @if (notice; as message) {
+      <app-alert [type]="message.type">{{ message.text }}</app-alert>
+    }
+    @if (error(); as message) {
+      <app-alert type="error">{{ message }}</app-alert>
+    }
+
+    <form class="auth__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-form-field
+        label="Correo electrónico"
+        type="email"
+        autocomplete="email"
+        [control]="form.controls.email"
+        [required]="true"
+      />
+      <app-form-field
+        label="Contraseña"
+        type="password"
+        autocomplete="current-password"
+        [control]="form.controls.password"
+        [required]="true"
+      />
+      <button
+        appButton
+        type="submit"
+        [block]="true"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+      >
+        {{ submitting() ? 'Iniciando sesión…' : 'Iniciar sesión' }}
+      </button>
+    </form>
+
+    <p class="auth__switch">
+      ¿Aún no tienes cuenta? <a routerLink="/auth/register">Crea una cuenta</a>
+    </p>
+  </section>
+</div>

@@ -1,0 +1,57 @@
+<header class="header">
+  <div class="header__inner">
+    <a class="brand" routerLink="/events" aria-label="Mis Eventos, inicio">
+      <span class="brand__mark" aria-hidden="true">ME</span>
+      <span class="brand__name">Mis Eventos</span>
+    </a>
+
+    <button
+      type="button"
+      class="menu-toggle"
+      aria-controls="site-menu"
+      [attr.aria-expanded]="menuOpen()"
+      (click)="toggleMenu()"
+    >
+      <span class="menu-toggle__icon" aria-hidden="true"></span>
+      <span class="visually-hidden">{{ menuOpen() ? 'Cerrar menú' : 'Abrir menú' }}</span>
+    </button>
+
+    <div id="site-menu" class="menu" [class.menu--open]="menuOpen()">
+      <nav aria-label="Navegación principal">
+        <ul class="nav">
+          <li>
+            <a
+              class="nav__link"
+              routerLink="/events"
+              routerLinkActive="nav__link--active"
+              ariaCurrentWhenActive="page"
+              [routerLinkActiveOptions]="{ exact: true }"
+              >Eventos</a
+            >
+          </li>
+        </ul>
+      </nav>
+
+      <div class="account">
+        @if (authorization.canCreateEvents()) {
+          <a appButton size="sm" routerLink="/events/new">
+            <span aria-hidden="true">＋</span> Crear evento
+          </a>
+        }
+
+        @if (user(); as current) {
+          <p class="account__user">
+            <span class="account__name">{{ current.name }}</span>
+            <span class="account__role">{{ roleLabel() }}</span>
+          </p>
+          <button appButton type="button" variant="ghost" size="sm" (click)="logout()">
+            Cerrar sesión
+          </button>
+        } @else {
+          <a appButton variant="ghost" size="sm" routerLink="/auth/login">Iniciar sesión</a>
+          <a appButton variant="secondary" size="sm" routerLink="/auth/register">Crear cuenta</a>
+        }
+      </div>
+    </div>
+  </div>
+</header>

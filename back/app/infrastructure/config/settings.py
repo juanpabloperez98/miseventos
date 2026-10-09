@@ -6,7 +6,19 @@ from enum import StrEnum
 from dotenv import load_dotenv
 
 MIN_JWT_SECRET_LENGTH = 32
+# Production also rejects low-variety keys ("aaaa...", "1234...") and documented placeholders.
+MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARS = 16
+JWT_SECRET_PLACEHOLDER_MARKERS = ("replace-with", "change-me", "changeme")
 LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
+SEED_ENABLED_VARIABLES = (
+    "SEED_ADMIN_ENABLED",
+    "SEED_ORGANIZER_ENABLED",
+    "SEED_ATTENDEE_ENABLED",
+    "SEED_DEMO_DATA_ENABLED",
+)
+
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_FALSE_VALUES = frozenset({"0", "false", "no", "off", ""})
 
 
 class ConfigurationError(Exception):
@@ -37,6 +49,8 @@ class Settings:
             raise ConfigurationError("JWT_EXPIRATION_MINUTES must be greater than zero")
         if self.log_level not in LOG_LEVELS:
             raise ConfigurationError(f"LOG_LEVEL must be one of {sorted(LOG_LEVELS)}")
+        if self.environment is Environment.PRODUCTION:
+            _ensure_production_jwt_secret(self.jwt_secret_key)
 
     @property
     def debug(self) -> bool:
@@ -48,8 +62,11 @@ class Settings:
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> "Settings":
+        environment = _parse_environment(env.get("FLASK_ENV", Environment.DEVELOPMENT))
+        if environment is Environment.PRODUCTION:
+            _ensure_seeding_disabled(env)
         return cls(
-            environment=_parse_environment(env.get("FLASK_ENV", Environment.DEVELOPMENT)),
+            environment=environment,
             database_url=require_env(env, "DATABASE_URL"),
             jwt_secret_key=require_env(env, "JWT_SECRET_KEY"),
             jwt_expiration_minutes=_parse_int(env, "JWT_EXPIRATION_MINUTES", default=60),
@@ -68,6 +85,37 @@ def require_env(env: Mapping[str, str], name: str) -> str:
     if not value:
         raise ConfigurationError(f"Environment variable {name} is required")
     return value
+
+
+def parse_bool(env: Mapping[str, str], name: str) -> bool:
+    value = env.get(name, "").strip().lower()
+    if value in _TRUE_VALUES:
+        return True
+    if value in _FALSE_VALUES:
+        return False
+    raise ConfigurationError(f"{name} must be true or false")
+
+
+def _ensure_production_jwt_secret(secret: str) -> None:
+    # Messages never include the secret itself.
+    lowered = secret.lower()
+    if any(marker in lowered for marker in JWT_SECRET_PLACEHOLDER_MARKERS):
+        raise ConfigurationError(
+            "JWT_SECRET_KEY still contains a placeholder value; set a random secret for production"
+        )
+    if len(set(secret)) < MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARS:
+        raise ConfigurationError(
+            "JWT_SECRET_KEY is too predictable for production; generate it with "
+            "secrets.token_urlsafe(48)"
+        )
+
+
+def _ensure_seeding_disabled(env: Mapping[str, str]) -> None:
+    enabled = [name for name in SEED_ENABLED_VARIABLES if parse_bool(env, name)]
+    if enabled:
+        raise ConfigurationError(
+            f"Seeding must be disabled in production; set to false: {', '.join(enabled)}"
+        )
 
 
 def _parse_environment(value: str) -> Environment:

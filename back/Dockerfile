@@ -1,6 +1,9 @@
 FROM python:3.12-slim
 
 ARG POETRY_VERSION=2.5.1
+# "true" installs the dev group too (pytest, ruff, mypy) so tests can run inside the container.
+# The production Compose file builds with INSTALL_DEV=false.
+ARG INSTALL_DEV=true
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -18,7 +21,11 @@ RUN python -m venv /opt/poetry \
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root --no-ansi
+RUN if [ "$INSTALL_DEV" = "true" ]; then \
+        poetry install --no-root --no-ansi; \
+    else \
+        poetry install --no-root --no-ansi --only main; \
+    fi
 
 COPY . .
 
@@ -27,5 +34,8 @@ USER appuser
 
 EXPOSE 5000
 
-# Migrations and seeding run before the server; if either fails the container exits.
-CMD ["sh", "-c", "alembic upgrade head && flask --app app.bootstrap:create_app seed-initial-data && flask --app app.bootstrap:create_app run --host 0.0.0.0 --port 5000 --debug"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
+
+# Migrations, then seeding + Flask dev server (development) or Gunicorn (FLASK_ENV=production).
+CMD ["sh", "scripts/start.sh"]

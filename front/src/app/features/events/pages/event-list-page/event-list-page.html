@@ -1,0 +1,104 @@
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero__inner">
+    <p class="hero__eyebrow">Mis Eventos</p>
+    <h1 id="hero-title" class="hero__title">Descubre eventos que te inspiran</h1>
+    <p class="hero__lead">
+      Conferencias, talleres y encuentros en un solo lugar. Encuentra tu próximo evento y consulta
+      su agenda de sesiones.
+    </p>
+
+    <form class="search" role="search" [formGroup]="searchForm" (ngSubmit)="submitSearch()">
+      <label class="visually-hidden" for="event-search">Buscar eventos por nombre</label>
+      <input
+        id="event-search"
+        class="search__input"
+        type="search"
+        placeholder="Buscar eventos por nombre"
+        autocomplete="off"
+        formControlName="search"
+        [attr.maxlength]="searchMaxLength"
+      />
+      <button appButton type="submit" variant="inverse">Buscar</button>
+    </form>
+
+    @if (authorization.canCreateEvents()) {
+      <a appButton class="hero__create" routerLink="/events/new" variant="secondary">
+        <span aria-hidden="true">＋</span> Crear evento
+      </a>
+    }
+  </div>
+</section>
+
+<div class="content">
+  @let current = state();
+
+  @if (flash; as message) {
+    <app-alert class="content__flash" [type]="message.type">{{ message.text }}</app-alert>
+  }
+
+  <div class="results-header">
+    <h2 #resultsHeading id="results-title" class="results-header__title" tabindex="-1">
+      @if (search()) {
+        Resultados para «{{ search() }}»
+      } @else {
+        Eventos disponibles
+      }
+    </h2>
+    @if (current.status === 'success') {
+      <p class="results-header__count" aria-live="polite">
+        {{ current.data.total }} {{ current.data.total === 1 ? 'evento' : 'eventos' }}
+      </p>
+    }
+    @if (search()) {
+      <button appButton type="button" variant="ghost" size="sm" (click)="clearSearch()">
+        Limpiar búsqueda
+      </button>
+    }
+  </div>
+
+  @if (current.status === 'loading') {
+    <app-loading label="Cargando eventos…" />
+  } @else if (current.status === 'error') {
+    <app-error-state
+      title="No se pudieron cargar los eventos"
+      [message]="errorMessage()"
+      (retry)="retry()"
+    />
+  } @else if (current.data.items.length > 0) {
+    <ul class="grid" aria-labelledby="results-title">
+      @for (event of current.data.items; track event.id) {
+        <li><app-event-card [event]="event" /></li>
+      }
+    </ul>
+    <app-pagination
+      class="content__pagination"
+      label="Paginación de eventos"
+      [page]="current.data.page"
+      [pages]="current.data.pages"
+      (pageChange)="changePage($event)"
+    />
+  } @else if (current.data.total > 0) {
+    <app-empty-state
+      title="Esta página no existe"
+      message="Hay eventos disponibles, pero no en esta página."
+    >
+      <button appButton type="button" variant="secondary" (click)="changePage(1)">
+        Ir a la primera página
+      </button>
+    </app-empty-state>
+  } @else if (search()) {
+    <app-empty-state
+      title="No encontramos eventos"
+      message="Ningún evento coincide con tu búsqueda. Prueba con otro nombre."
+    >
+      <button appButton type="button" variant="secondary" (click)="clearSearch()">
+        Ver todos los eventos
+      </button>
+    </app-empty-state>
+  } @else {
+    <app-empty-state
+      title="Todavía no hay eventos"
+      message="Cuando se publiquen nuevos eventos aparecerán aquí."
+    />
+  }
+</div>

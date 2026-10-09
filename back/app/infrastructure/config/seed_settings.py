@@ -8,14 +8,11 @@ from app.application.dto import SeedInitialDataCommand, SeedUser
 from app.domain.enums import UserRole
 from app.domain.exceptions import InvalidValueError
 from app.domain.value_objects import Email
-from app.infrastructure.config.settings import ConfigurationError, require_env
+from app.infrastructure.config.settings import ConfigurationError, parse_bool, require_env
 
 # Same limits the public registration endpoint applies to passwords.
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
-
-_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
-_FALSE_VALUES = frozenset({"0", "false", "no", "off", ""})
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,15 +46,6 @@ class SeedSettings:
 def load_seed_settings() -> SeedSettings:
     load_dotenv()
     return SeedSettings.from_env(os.environ)
-
-
-def parse_bool(env: Mapping[str, str], name: str) -> bool:
-    value = env.get(name, "").strip().lower()
-    if value in _TRUE_VALUES:
-        return True
-    if value in _FALSE_VALUES:
-        return False
-    raise ConfigurationError(f"{name} must be true or false")
 
 
 def _parse_user(env: Mapping[str, str], role: UserRole) -> SeedUser:

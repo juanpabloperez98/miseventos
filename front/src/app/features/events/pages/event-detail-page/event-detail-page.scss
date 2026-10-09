@@ -1,0 +1,119 @@
+@use 'mixins' as mx;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+
+  @include mx.container;
+}
+
+.back-link {
+  align-self: flex-start;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.event {
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--space-5);
+    background: var(--gradient-brand);
+
+    @include mx.respond-to(md) {
+      padding: var(--space-7);
+    }
+  }
+
+  &__title {
+    color: #fff;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  &__body {
+    display: grid;
+    gap: var(--space-6);
+    padding: var(--space-5);
+
+    @include mx.respond-to(md) {
+      grid-template-columns: 18rem 1fr;
+      padding: var(--space-7);
+    }
+  }
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+
+  &__item {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--color-primary-subtle);
+  }
+
+  dt {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-primary);
+  }
+
+  dd {
+    margin: var(--space-1) 0 0;
+    font-weight: var(--font-weight-medium);
+  }
+}
+
+.section-title {
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-xl);
+}
+
+.description__text {
+  white-space: pre-line;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.confirm {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-5) var(--space-5) 0;
+  padding: var(--space-5);
+  border: var(--border-width) solid #f3c4c4;
+  border-radius: var(--radius-lg);
+  background: var(--color-danger-subtle);
+
+  @include mx.respond-to(md) {
+    margin: var(--space-6) var(--space-7) 0;
+  }
+
+  &__title {
+    font-size: var(--font-size-lg);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+}
