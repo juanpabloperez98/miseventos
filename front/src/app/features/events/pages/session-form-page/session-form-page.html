@@ -1,0 +1,55 @@
+<a class="back-link" [routerLink]="['/events', id()]">
+  <span aria-hidden="true">←</span> Volver al evento
+</a>
+
+<header class="page-header">
+  <h1>{{ isEdit() ? 'Editar sesión' : 'Nueva sesión' }}</h1>
+</header>
+
+@let current = state();
+
+@if (current.status === 'loading') {
+  <app-loading label="Cargando…" />
+} @else if (current.status === 'error') {
+  @if (current.error.status === 404) {
+    <app-empty-state
+      [title]="isEdit() ? 'Sesión no encontrada' : 'Evento no encontrado'"
+      message="No existe o no está disponible para tu cuenta."
+    >
+      <a appButton [routerLink]="['/events', id()]" variant="secondary">Volver al evento</a>
+    </app-empty-state>
+  } @else {
+    <app-error-state
+      title="No se pudo cargar la información"
+      [message]="describe(current.error)"
+      (retry)="retry()"
+    />
+  }
+} @else if (blockedReason(); as reason) {
+  <app-error-state
+    title="No puedes gestionar estas sesiones"
+    [message]="reason"
+    [retryable]="false"
+  >
+    <a appButton [routerLink]="['/events', id()]" variant="secondary">Volver al evento</a>
+  </app-error-state>
+} @else {
+  <p class="page-header__lead">
+    Evento: <strong>{{ current.data.event.name }}</strong>
+  </p>
+  <div class="panel">
+    @if (error(); as message) {
+      <app-alert type="error">{{ message }}</app-alert>
+    }
+    <app-session-form
+      [event]="current.data.event"
+      [session]="current.data.session"
+      [speakers]="current.data.speakers"
+      [submitting]="submitting()"
+      [serverErrors]="fieldErrors()"
+      [submitLabel]="isEdit() ? 'Guardar cambios' : 'Crear sesión'"
+      (save)="save($event)"
+      (cancelled)="cancel()"
+    />
+  </div>
+}

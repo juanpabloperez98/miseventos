@@ -544,3 +544,64 @@ class TestDeleteSession:
         db_client.delete(f"/api/events/{event_id}", headers=organizer.headers)
 
         assert db_session.scalar(select(func.count()).select_from(SessionModel)) == 0
+
+
+class TestSessionCapacity:
+    """A session cannot hold more people than its event, whatever client calls the API."""
+
+    MESSAGE = {"message": "Session capacity cannot exceed the event capacity"}
+
+    @pytest.fixture
+    def small_event_id(self, db_client: FlaskClient, organizer: ApiUser) -> int:
+        response = db_client.post(
+            "/api/events", json={**EVENT, "capacity": 100}, headers=organizer.headers
+        )
+        assert response.status_code == 201, response.get_json()
+        event_id: int = response.get_json()["id"]
+        return event_id
+
+    @pytest.mark.parametrize("capacity", [1, 99, 100])
+    def test_creates_sessions_up_to_the_event_capacity(
+        self, db_client: FlaskClient, organizer: ApiUser, small_event_id: int, capacity: int
+    ) -> None:
+        response = _create_session(db_client, organizer, small_event_id, capacity=capacity)
+
+        assert response.status_code == 201
+        assert response.get_json()["capacity"] == capacity
+
+    @pytest.mark.parametrize("capacity", [101, 200])
+    def test_rejects_sessions_above_the_event_capacity(
+        self,
+        db_client: FlaskClient,
+        db_session: Session,
+        organizer: ApiUser,
+        small_event_id: int,
+        capacity: int,
+    ) -> None:
+        response = _create_session(db_client, organizer, small_event_id, capacity=capacity)
+
+        assert response.status_code == 422
+        assert response.get_json() == self.MESSAGE
+        assert db_session.scalar(select(func.count()).select_from(SessionModel)) == 0
+
+    def test_rejects_updates_above_the_event_capacity(
+        self, db_client: FlaskClient, organizer: ApiUser, small_event_id: int
+    ) -> None:
+        session_id = _create_session_id(db_client, organizer, small_event_id, capacity=50)
+
+        response = _update_session(db_client, organizer, session_id, capacity=101)
+
+        assert response.status_code == 422
+        assert response.get_json() == self.MESSAGE
+        stored = db_client.get(f"/api/sessions/{session_id}", headers=organizer.headers)
+        assert stored.get_json()["capacity"] == 50
+
+    def test_accepts_updates_up_to_the_event_capacity(
+        self, db_client: FlaskClient, organizer: ApiUser, small_event_id: int
+    ) -> None:
+        session_id = _create_session_id(db_client, organizer, small_event_id, capacity=50)
+
+        response = _update_session(db_client, organizer, session_id, capacity=100)
+
+        assert response.status_code == 200
+        assert response.get_json()["capacity"] == 100

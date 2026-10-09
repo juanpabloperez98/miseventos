@@ -172,6 +172,31 @@ class TestCreateSession:
         with pytest.raises(InvalidValueError, match="within the event schedule"):
             create.execute(OWNER, CreateSessionCommand(event.id or 0, details))
 
+    @pytest.mark.parametrize("capacity", [1, 100])
+    def test_accepts_capacity_up_to_the_event_capacity(
+        self, create: CreateSessionUseCase, event: Event, capacity: int
+    ) -> None:
+        assert event.capacity == 100
+
+        created = create.execute(
+            OWNER, CreateSessionCommand(event.id or 0, _details(capacity=capacity))
+        )
+
+        assert created.capacity == capacity
+
+    def test_rejects_capacity_above_the_event_capacity_without_saving(
+        self,
+        create: CreateSessionUseCase,
+        sessions: InMemorySessionRepository,
+        unit_of_work: SpyUnitOfWork,
+        event: Event,
+    ) -> None:
+        with pytest.raises(InvalidValueError, match="cannot exceed the event capacity"):
+            create.execute(OWNER, CreateSessionCommand(event.id or 0, _details(capacity=101)))
+
+        assert sessions.list_by_event(event.id or 0) == []
+        assert unit_of_work.commits == 0
+
     @pytest.mark.parametrize(
         "overrides",
         [
@@ -351,6 +376,30 @@ class TestUpdateSession:
 
         with pytest.raises(InvalidValueError, match="within the event schedule"):
             update.execute(OWNER, UpdateSessionCommand(session.id or 0, details))
+
+    def test_accepts_capacity_equal_to_the_event_capacity(
+        self, update: UpdateSessionUseCase, session: Session
+    ) -> None:
+        updated = update.execute(
+            OWNER, UpdateSessionCommand(session.id or 0, _details(capacity=100))
+        )
+
+        assert updated.capacity == 100
+
+    def test_rejects_capacity_above_the_event_capacity_without_saving(
+        self,
+        update: UpdateSessionUseCase,
+        sessions: InMemorySessionRepository,
+        unit_of_work: SpyUnitOfWork,
+        session: Session,
+    ) -> None:
+        with pytest.raises(InvalidValueError, match="cannot exceed the event capacity"):
+            update.execute(OWNER, UpdateSessionCommand(session.id or 0, _details(capacity=101)))
+
+        stored = sessions.get_by_id(session.id or 0)
+        assert stored is not None
+        assert stored.capacity == session.capacity
+        assert unit_of_work.commits == 0
 
     def test_rejects_unknown_speaker(self, update: UpdateSessionUseCase, session: Session) -> None:
         with pytest.raises(NotFoundError, match="Speaker not found"):

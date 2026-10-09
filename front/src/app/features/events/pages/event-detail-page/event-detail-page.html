@@ -87,24 +87,34 @@
     }
 
     <div class="event__body">
-      <dl class="facts">
-        <div class="facts__item">
-          <dt>Fecha</dt>
-          <dd>
-            <time [attr.datetime]="item.start_date">{{
-              item.start_date | dateRange: item.end_date
-            }}</time>
-          </dd>
-        </div>
-        <div class="facts__item">
-          <dt>Ubicación</dt>
-          <dd>{{ item.location }}</dd>
-        </div>
-        <div class="facts__item">
-          <dt>Capacidad</dt>
-          <dd>{{ item.capacity | number }} personas</dd>
-        </div>
-      </dl>
+      <div class="event__aside">
+        <dl class="facts">
+          <div class="facts__item">
+            <dt>Fecha</dt>
+            <dd>
+              <time [attr.datetime]="item.start_date">{{
+                item.start_date | dateRange: item.end_date
+              }}</time>
+            </dd>
+          </div>
+          <div class="facts__item">
+            <dt>Ubicación</dt>
+            <dd>{{ item.location }}</dd>
+          </div>
+          <div class="facts__item">
+            <dt>Capacidad</dt>
+            <dd>{{ item.capacity | number }} personas</dd>
+          </div>
+        </dl>
+
+        <app-registration-panel
+          [status]="registrationStatus()"
+          [submitting]="registering()"
+          [error]="registrationError()"
+          [returnUrl]="returnUrl()"
+          (register)="register()"
+        />
+      </div>
 
       <section class="description" aria-labelledby="description-title">
         <h2 id="description-title" class="section-title">Acerca del evento</h2>
@@ -118,7 +128,20 @@
   </article>
 
   <section class="sessions" aria-labelledby="sessions-title">
-    <h2 id="sessions-title" class="section-title">Sesiones</h2>
+    <div class="sessions__header">
+      <h2 id="sessions-title" class="section-title">Sesiones del evento</h2>
+      @if (canEdit()) {
+        <a appButton size="sm" [routerLink]="['/events', item.id, 'sessions', 'new']">
+          <span aria-hidden="true">＋</span> Añadir sesión
+        </a>
+      }
+    </div>
+    @if (sessionManagementNote(); as note) {
+      <app-alert class="sessions__note" type="info">{{ note }}</app-alert>
+    }
+    @if (sessionError(); as message) {
+      <app-alert type="error">{{ message }}</app-alert>
+    }
     @let sessions = sessionsState();
     @if (sessions.status === 'loading') {
       <app-loading label="Cargando sesiones…" />
@@ -132,9 +155,21 @@
       <app-empty-state
         title="Sin sesiones programadas"
         message="Este evento todavía no tiene sesiones en su agenda."
-      />
+      >
+        @if (canEdit()) {
+          <a appButton [routerLink]="['/events', item.id, 'sessions', 'new']">
+            Añadir la primera sesión
+          </a>
+        }
+      </app-empty-state>
     } @else {
-      <app-session-list [sessions]="sessions.data" />
+      <app-session-list
+        [sessions]="sessions.data"
+        [speakerNames]="speakerNames()"
+        [manageable]="canEdit()"
+        [removingId]="removingSessionId()"
+        (remove)="removeSession($event)"
+      />
     }
   </section>
 }

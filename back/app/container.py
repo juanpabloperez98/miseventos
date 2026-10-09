@@ -28,6 +28,7 @@ from app.application.use_cases.sessions import (
     ListEventSessionsUseCase,
     UpdateSessionUseCase,
 )
+from app.application.use_cases.speakers import ListSpeakersUseCase
 from app.domain.ports import PasswordHasher, TokenService
 from app.infrastructure.config import Settings
 from app.infrastructure.database.repositories import (
@@ -170,6 +171,9 @@ class RequestScope:
 
     def list_my_registered_events(self) -> ListMyRegisteredEventsUseCase:
         return ListMyRegisteredEventsUseCase(SqlAlchemyEventRepository(self._session))
+
+    def list_speakers(self) -> ListSpeakersUseCase:
+        return ListSpeakersUseCase(SqlAlchemySpeakerRepository(self._session))
 
     def seed_initial_data(self) -> SeedInitialDataUseCase:
         return SeedInitialDataUseCase(

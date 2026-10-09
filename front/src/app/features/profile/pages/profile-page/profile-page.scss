@@ -1,0 +1,102 @@
+@use 'mixins' as mx;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+
+  @include mx.container;
+}
+
+.profile {
+  display: grid;
+  gap: var(--space-5);
+
+  &__card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-5);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-md);
+
+    @include mx.respond-to(md) {
+      padding: var(--space-6);
+    }
+  }
+
+  &__avatar {
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: var(--radius-full);
+    background: var(--gradient-brand);
+    color: #fff;
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+  }
+
+  &__data {
+    display: grid;
+    flex: 1;
+    gap: var(--space-3);
+
+    @include mx.respond-to(md) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    dt {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-primary);
+    }
+
+    dd {
+      margin: var(--space-1) 0 0;
+      font-weight: var(--font-weight-medium);
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
+.registrations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  &__title {
+    font-size: var(--font-size-2xl);
+  }
+
+  &__count {
+    color: var(--color-text-muted);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    padding: 0;
+    list-style: none;
+
+    @include mx.respond-to(sm) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @include mx.respond-to(lg) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+}

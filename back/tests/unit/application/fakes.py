@@ -179,7 +179,9 @@ class InMemorySpeakerRepository(SpeakerRepository):
         raise NotImplementedError
 
     def list_all(self, page: PageRequest) -> Page[Speaker]:
-        raise NotImplementedError
+        ordered = sorted(self._speakers.values(), key=lambda speaker: (speaker.name, speaker.id))
+        start = (page.page - 1) * page.per_page
+        return Page(items=ordered[start : start + page.per_page], total=len(ordered), request=page)
 
 
 class SpyUnitOfWork(UnitOfWork):

@@ -29,6 +29,17 @@
               >Eventos</a
             >
           </li>
+          @if (user()) {
+            <li>
+              <a
+                class="nav__link"
+                routerLink="/profile"
+                routerLinkActive="nav__link--active"
+                ariaCurrentWhenActive="page"
+                >Mi perfil</a
+              >
+            </li>
+          }
         </ul>
       </nav>
 

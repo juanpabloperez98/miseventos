@@ -44,6 +44,15 @@ const KNOWN_MESSAGES: Record<string, string> = {
     'La capacidad no puede ser menor que el número de personas inscritas.',
   'Start must be before end': 'La fecha de inicio debe ser anterior a la de finalización.',
   'Invalid event status transition': 'El cambio de estado no está permitido.',
+  'User is already registered to this event': 'Ya estás inscrito en este evento.',
+  'Event is not open for registration': 'Este evento no admite inscripciones en este momento.',
+  'Event has reached its capacity': 'El evento ha alcanzado su capacidad máxima.',
+  'Session must take place within the event schedule':
+    'La sesión debe estar dentro del horario del evento.',
+  'Speaker not found': 'El ponente seleccionado no existe.',
+  'Session capacity cannot exceed the event capacity':
+    'La capacidad de la sesión no puede superar la capacidad del evento.',
+  'Session not found': 'La sesión no existe o no está disponible.',
 };
 
 /** Returns a user-facing message (in Spanish) describing the error. */

@@ -12,6 +12,7 @@ import { provideRouter, type Routes, withComponentInputBinding } from '@angular/
 
 import { type User } from '../app/core/auth/auth.models';
 import { AuthService } from '../app/core/auth/auth.service';
+import { provideSessionExpiryRedirect } from '../app/core/auth/session-expiry';
 import { TokenStorage } from '../app/core/auth/token-storage';
 import { API_URL } from '../app/core/config/api-url.token';
 import { authInterceptor } from '../app/core/interceptors/auth.interceptor';
@@ -24,7 +25,10 @@ export class BlankPage {}
 
 export const TEST_API_URL = 'http://api.test/api';
 
-/** Real HttpClient (with the auth interceptor) against `HttpTestingController`, real router. */
+/**
+ * Real HttpClient (with the auth interceptor) against `HttpTestingController`, real router and the
+ * same session-expiry handling as the application.
+ */
 export function provideTestDependencies(routes: Routes = []): (Provider | EnvironmentProviders)[] {
   return [
     provideZonelessChangeDetection(),
@@ -32,6 +36,8 @@ export function provideTestDependencies(routes: Routes = []): (Provider | Enviro
     provideHttpClientTesting(),
     provideRouter(routes, withComponentInputBinding()),
     { provide: API_URL, useValue: TEST_API_URL },
+    // Same session-expiry behavior as the application (app.config.ts).
+    provideSessionExpiryRedirect(),
   ];
 }
 

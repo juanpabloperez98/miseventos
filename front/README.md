@@ -5,8 +5,8 @@ Cliente web de **Mis Eventos**, construido con Angular. Consume la API REST del 
 
 > **Estado.** Implementados: catálogo de eventos con búsqueda y paginación del servidor, detalle con
 > sesiones, creación/edición/eliminación de eventos según permisos, registro, inicio y cierre de sesión
-> con JWT. Pendientes: perfil de usuario, inscripciones a eventos y gestión de sesiones y ponentes
-> (ver [Pendiente](#pendiente-para-próximas-fases)).
+> con JWT, gestión de sesiones con asignación de ponente, inscripción a eventos desde el detalle y
+> perfil con las inscripciones del usuario (ver [Pendiente](#pendiente-para-próximas-fases)).
 
 ## Stack
 
@@ -90,14 +90,21 @@ front/
 │   │   │   └── layouts/main-layout/
 │   │   ├── features/           # Una carpeta por funcionalidad, cargada de forma diferida
 │   │   │   ├── events/
+│   │   │   │   ├── index.ts    # API pública de la feature (EventCard, EventModel)
 │   │   │   │   ├── events.routes.ts
 │   │   │   │   ├── models/     # EventModel, EventPage, EventSession, reglas de estado
-│   │   │   │   ├── services/   # EventsService
-│   │   │   │   ├── components/ # event-card, event-form, event-status-badge, session-list
+│   │   │   │   ├── services/   # EventsService, SessionsService, SpeakersService
+│   │   │   │   ├── components/ # event-card, event-form, event-status-badge, session-list,
+│   │   │   │   │               # session-form, registration-panel
 │   │   │   │   └── pages/      # list, detail, create, edit
 │   │   │   ├── auth/
 │   │   │   │   ├── auth.routes.ts
 │   │   │   │   └── pages/      # login, register
+│   │   │   ├── profile/
+│   │   │   │   ├── profile.routes.ts
+│   │   │   │   └── pages/      # profile-page
+│   │   │   ├── registrations/  # RegistrationsService (inscribirse, mis inscripciones) + index.ts
+│   │   │   ├── forbidden/      # Página «Acceso denegado» + index.ts
 │   │   │   └── not-found/
 │   │   │       └── pages/not-found-page/
 │   │   ├── app.ts              # Componente raíz: solo contiene <router-outlet />
@@ -136,8 +143,10 @@ layout; `features/auth` solo contiene las páginas.
 - **shared/**: piezas visuales y utilidades **sin estado de negocio**. No se colocan servicios de datos
   aquí.
 - **layout/**: estructura común de las páginas. Puede usar `core` y `shared`.
-- **features/**: cada funcionalidad es autónoma. Puede depender de `core` y `shared`, pero **no de otra
-  feature**. Si dos features necesitan lo mismo, se mueve a `shared` (UI) o `core` (infraestructura).
+- **features/**: cada funcionalidad es autónoma. Puede depender de `core` y `shared`. Solo puede usar
+  otra feature a través de su `index.ts` (API pública), nunca importando rutas internas: `profile` usa
+  `EventCard` y `EventModel` desde `features/events`. Si algo pasa a ser genérico, se mueve a `shared`
+  (UI) o `core` (infraestructura).
 
 ## Convenciones para añadir una funcionalidad
 
@@ -191,25 +200,31 @@ layout; `features/auth` solo contiene las páginas.
 
 ## Funcionalidades y rutas
 
-| Ruta                            | Acceso                       | Descripción                                                       |
-| ------------------------------- | ---------------------------- | ----------------------------------------------------------------- |
-| `/` → `/events`                 | Público                      | Portada con buscador y catálogo paginado (`?page=`, `?search=`)   |
-| `/events/:id`                   | Público                      | Detalle del evento y sus sesiones; editar/eliminar según permisos |
-| `/events/new`                   | ADMIN, ORGANIZER             | Crear evento (se guarda como `DRAFT`)                             |
-| `/events/:id/edit`              | ADMIN, ORGANIZER propietario | Editar campos y cambiar estado                                    |
-| `/auth/login`, `/auth/register` | Solo anónimos                | Inicio de sesión y registro de asistentes                         |
+| Ruta                                                               | Acceso                       | Descripción                                                                                       |
+| ------------------------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| `/` → `/events`                                                    | Público                      | Portada con buscador y catálogo paginado (`?page=`, `?search=`)                                   |
+| `/events/:id`                                                      | Público                      | Detalle del evento y sus sesiones; editar/eliminar según permisos                                 |
+| `/events/new` (alias `/events/create`)                             | ADMIN, ORGANIZER             | Crear evento (se guarda como `DRAFT`). Anónimo → login; sin permiso → «Acceso denegado»           |
+| `/events/:id/edit`                                                 | ADMIN, ORGANIZER propietario | Editar campos y cambiar estado                                                                    |
+| `/events/:id/sessions/new`, `/events/:id/sessions/:sessionId/edit` | ADMIN, ORGANIZER propietario | Crear y editar sesiones (anónimo → login; sin permiso → «Acceso denegado»)                        |
+| `/auth/login`, `/auth/register`                                    | Solo anónimos                | Inicio de sesión y registro de asistentes                                                         |
+| `/profile`                                                         | Autenticados (`authGuard`)   | Datos del usuario y eventos en los que está inscrito. Sin sesión → login con `returnUrl=/profile` |
 
 ### Integración con la API
 
 Solo se usan endpoints existentes del backend (`back/README.md`):
 
-| Endpoint                                                              | Uso                                                                                              |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `GET /api/events?page&per_page&search`                                | Catálogo. Paginación y búsqueda (por nombre) en el servidor; 9 eventos por página                |
-| `GET /api/events/{id}` y `GET /api/events/{id}/sessions`              | Detalle: dos peticiones en paralelo, cada una con su propio estado de carga y error              |
-| `POST /api/events` / `PUT /api/events/{id}`                           | Crear / editar (no existe `PATCH`). `status` solo se envía si cambia                             |
-| `DELETE /api/events/{id}`                                             | Borrador: se elimina (204). Publicado: se cancela (200) y la vista se actualiza con la respuesta |
-| `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` | Registro (siempre `ATTENDEE`), JWT y usuario actual                                              |
+| Endpoint                                                                  | Uso                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/events?page&per_page&search`                                    | Catálogo. Paginación y búsqueda (por nombre) en el servidor; 9 eventos por página                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `POST /api/events/{id}/sessions`, `GET`/`PUT`/`DELETE /api/sessions/{id}` | Gestión de sesiones (`SessionsService`): crear y editar en `/events/:id/sessions/...` (el formulario valida horario dentro del evento, inicio < fin y capacidad > 0, igual que el backend); eliminar desde el detalle con confirmación (se quita de la lista sin recargarla). La sección «Sesiones del evento» es visible para todos; «Añadir sesión» (también en el estado vacío), «Editar» y «Eliminar» solo para ADMIN u ORGANIZER propietario y si el evento no está cancelado ni finalizado. A un ADMIN/ORGANIZER que no puede gestionarlas se le explica el motivo |
+| `GET /api/speakers`                                                       | Catálogo de ponentes de solo lectura (`SpeakersService.listAll`, páginas de 100): selector «Ponente» del formulario y nombre del ponente en el detalle (solo se pide si alguna sesión tiene ponente)                                                                                                                                                                                                                                                                                                                                                                     |
+| `GET /api/events/{id}` y `GET /api/events/{id}/sessions`                  | Detalle: dos peticiones en paralelo, cada una con su propio estado de carga y error                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `POST /api/events` / `PUT /api/events/{id}`                               | Crear / editar (no existe `PATCH`). `status` solo se envía si cambia                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `DELETE /api/events/{id}`                                                 | Borrador: se elimina (204). Publicado: se cancela (200) y la vista se actualiza con la respuesta                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`     | Registro (siempre `ATTENDEE`), JWT y usuario actual                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `POST /api/events/{id}/registrations`                                     | Inscripción desde el detalle (cuerpo vacío; el usuario sale del token). Solo eventos `PUBLISHED`. 201 → «Estás inscrito»; 409 duplicado → se trata como inscrito; 409 sin plazas o no abierto, 404 → mensaje; 401 → fin de sesión e invitación a iniciar sesión                                                                                                                                                                                                                                                                                                          |
+| `GET /api/me/registrations`                                               | Perfil. Devuelve un array de eventos (`EventSchema`, el mismo `EventModel` del catálogo) ordenado por fecha de inicio, incluidos los cancelados o finalizados. No incluye datos propios de la inscripción (fecha ni estado), por lo que la tarjeta muestra el estado del evento                                                                                                                                                                                                                                                                                          |
 
 Los modelos de `features/events/models` y `core/auth/auth.models.ts` reflejan los esquemas marshmallow
 del backend. Los errores `{ message, errors: { json: { campo: [...] } } }` se normalizan en
@@ -254,12 +269,61 @@ la visibilidad de los eventos depende de él.
   - `canManageEvent(ownerId)`: ADMIN gestiona cualquier evento; ORGANIZER solo los que creó.
   - Las reglas de estado (`isEventEditable`, `removalAction`) están en `events/models`: los eventos
     cancelados o finalizados no muestran acciones.
-- **Guards**: `eventManagerGuard` protege `/events/new` y `/events/:id/edit` (anónimos → login con
-  `returnUrl`; ATTENDEE → catálogo con aviso). La propiedad del evento se comprueba al cargarlo en la
-  página de edición. `guestGuard` aparta a los usuarios autenticados de login y registro. `returnUrl`
-  solo admite rutas internas.
+- **Autenticación antes que autorización** en `/events/new` y `/events/:id/edit`
+  (`managerPage()` en `events.routes.ts`):
+  1. Anónimo → `/auth/login?returnUrl=<ruta pedida>` y, tras iniciar sesión, vuelta a esa ruta.
+  2. Autenticado sin permiso (ATTENDEE) → página «Acceso denegado» en la propia URL pedida, sin
+     cerrar la sesión ni redirigir al login o al catálogo.
+  3. ADMIN u ORGANIZER → formulario.
+
+  La ruta del formulario solo coincide si `canManageEventsMatch` lo permite; si no, el router usa una
+  ruta gemela con la misma URL protegida por `authGuard` que muestra el acceso denegado.
+  `eventManagerGuard` vuelve a comprobar sesión y rol en la ruta del formulario. La propiedad del
+  evento se comprueba al cargarlo en la página de edición. `guestGuard` aparta a los usuarios
+  autenticados de login y registro. `returnUrl` solo admite rutas internas.
+
+- **Rutas de eventos**: las estáticas (`new`) se declaran antes que las de id, y `:id` / `:id/edit`
+  solo aceptan ids numéricos (`eventIdMatcher`), así que un segmento como `create` o `abc` nunca se
+  interpreta como id ni provoca `GET /events/NaN`: `/events/create` es un alias de `/events/new` y el
+  resto muestra la página 404.
+- **HTTP 401 frente a 403**: un 401 termina la sesión (y, en una ruta protegida, lleva al login); un
+  403 la conserva y la página muestra que no hay permiso.
 - El backend sigue siendo la autoridad: vuelve a comprobar el rol (desde su base de datos) y la
   propiedad en cada petición; la interfaz solo evita ofrecer acciones que fallarían.
+
+## Gestión del estado
+
+No hay un store global (NgRx u otro): el estado compartido es poco y vive en servicios `root` con
+**signals**; el estado de cada pantalla se deriva de la URL y de la API.
+
+| Estado                                          | Dónde vive                                                                                                            | Quién lo usa                        |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Usuario, sesión (`user`, `isAuthenticated`)     | `AuthService` (signals de solo lectura)                                                                               | Cabecera, guards, permisos, páginas |
+| Token y su caducidad                            | `TokenStorage` (`sessionStorage`), solo a través de `AuthService`                                                     | Interceptor                         |
+| Permisos (`canCreateEvents`, `canManageEvent`)  | `AuthorizationService` (`computed` sobre el usuario)                                                                  | Cabecera, listado, detalle, edición |
+| Fin de sesión (`logout`, `expired`, `rejected`) | `AuthService.sessionEnded$` (una emisión por sesión)                                                                  | `SessionExpiryRedirect`             |
+| Mensaje entre páginas                           | `FlashMessageService` (un solo uso)                                                                                   | Páginas de destino                  |
+| Listado, detalle, sesiones, perfil              | Cada página: `toSignal(toObservable(clave).pipe(switchMap(...)))` → `RequestState<T>` (`loading`, `success`, `error`) | La propia página                    |
+
+Reglas que mantienen la interfaz coherente:
+
+- **La clave de cada carga incluye al usuario** (además de la página, la búsqueda o el id). Al iniciar o
+  cerrar sesión, el listado, el detalle y el perfil vuelven a pedir los datos con la nueva identidad y
+  muestran `loading` mientras tanto, de modo que nunca se ven datos del usuario anterior. El perfil no
+  consulta la API sin sesión.
+- **`switchMap` cancela la petición anterior** si la clave cambia antes de que responda (cambios
+  rápidos de página o de búsqueda), así que una respuesta antigua no puede pisar a la nueva.
+- **Sin caché**: cada página consulta al entrar, por lo que tras crear, editar o eliminar no quedan
+  datos obsoletos. El estado transitorio del detalle (aviso, confirmación de eliminación) se reinicia
+  al cambiar de evento o de usuario (`linkedSignal`).
+- **Fin de sesión**:
+  - _Logout_: `AuthService` borra token, usuario y mensajes pendientes; la cabecera se actualiza al
+    instante y navega al catálogo.
+  - _Token caducado o 401_: además, si la ruta activa está protegida (`authGuard`,
+    `eventManagerGuard`), `SessionExpiryRedirect` lleva una sola vez al login con `returnUrl` y un aviso.
+    El fin de sesión es idempotente: varios 401 simultáneos producen una única redirección. El
+    interceptor reintenta una vez sin token solo los `GET` y la página de login no hace peticiones
+    autenticadas, así que no hay bucles.
 
 ## Configuración de la URL de la API
 
@@ -391,7 +455,9 @@ registro, `AuthService`, `AuthorizationService`, interceptor (dominios, 401, 403
 
 ## Pendiente para próximas fases
 
-- Perfil de usuario e inscripciones (`POST /api/events/{id}/registrations`, `GET /api/me/registrations`).
-- Gestión de sesiones desde la interfaz y datos de ponentes (requiere el endpoint de speakers).
+- Gestión de ponentes (alta, edición, baja): fuera del alcance; las sesiones asignan ponentes ya
+  existentes mediante `GET /api/speakers`.
+- El backend no informa de plazas libres ni de la fecha de inscripción en `GET /me/registrations`; el
+  detalle consulta esa lista para saber si el usuario ya está inscrito.
 - Filtro por estado del catálogo para organizadores (`?status=` ya existe en la API).
 - Estrategia de caché HTTP si el volumen de datos lo justifica.

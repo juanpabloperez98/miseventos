@@ -10,6 +10,7 @@ import {
   cleanUpAuth,
   provideTestDependencies,
   TEST_API_URL,
+  TEST_USERS,
   textOf,
 } from '../testing/test-helpers';
 import { routes } from './app.routes';
@@ -54,5 +55,41 @@ describe('App routes', () => {
 
     expect(rendered().querySelector('app-login-page')).not.toBeNull();
     expect(TestBed.inject(Title).getTitle()).toBe('Iniciar sesión | Mis Eventos');
+  });
+
+  it('should protect /profile and return to it after signing in', async () => {
+    await harness.navigateByUrl('/profile', MainLayout);
+    expect(TestBed.inject(Router).url).toBe('/auth/login?returnUrl=%2Fprofile');
+
+    const fill = (type: string, value: string) => {
+      const input = rendered().querySelector<HTMLInputElement>(`input[type="${type}"]`)!;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+    fill('email', TEST_USERS.attendee.email);
+    fill('password', 'password123');
+    rendered().querySelector<HTMLButtonElement>('button[type="submit"]')?.click();
+    await harness.fixture.whenStable();
+
+    http.expectOne(`${TEST_API_URL}/auth/login`).flush({
+      access_token: 'jwt',
+      token_type: 'Bearer',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+    });
+    http.expectOne(`${TEST_API_URL}/auth/me`).flush(TEST_USERS.attendee);
+    await harness.fixture.whenStable();
+    TestBed.tick();
+    http
+      .expectOne(`${TEST_API_URL}/me/registrations`)
+      .flush([buildEvent({ id: 3, name: 'Angular Summit' })]);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/profile');
+    expect(TestBed.inject(Title).getTitle()).toBe('Mi perfil | Mis Eventos');
+    expect(rendered().querySelector('main#main-content app-profile-page')).not.toBeNull();
+    expect(textOf(rendered().querySelector('app-event-card'))).toContain('Angular Summit');
+    expect(rendered().querySelector('nav a[href="/profile"]')?.getAttribute('aria-current')).toBe(
+      'page',
+    );
   });
 });

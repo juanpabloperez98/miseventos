@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { type User } from '../../../../core/auth/auth.models';
+import { AuthService } from '../../../../core/auth/auth.service';
 import {
   BlankPage,
   buildEvent,
@@ -129,6 +130,72 @@ describe('EventListPage', () => {
 
     expect(TestBed.inject(Router).url).toBe('/events?search=python');
     listRequest().flush(buildPage([]));
+  });
+
+  describe('session transitions', () => {
+    it('should reload anonymously after logout without keeping the previous results', async () => {
+      await open('/events', TEST_USERS.organizer);
+      const first = listRequest();
+      expect(first.request.headers.get('Authorization')).toBe(
+        `Bearer token-${TEST_USERS.organizer.id}`,
+      );
+      first.flush(buildPage([buildEvent({ id: 1, name: 'Borrador privado', status: 'DRAFT' })]));
+      await settle();
+      expect(textOf(page())).toContain('Borrador privado');
+
+      TestBed.inject(AuthService).logout();
+      await settle();
+
+      // The previous user's draft disappears immediately: the page shows the loading state.
+      expect(textOf(page())).not.toContain('Borrador privado');
+      expect(page().querySelector('app-loading')).not.toBeNull();
+      const second = listRequest();
+      expect(second.request.headers.has('Authorization')).toBeFalse();
+      second.flush(buildPage([buildEvent({ id: 2, name: 'Evento público' })]));
+      await settle();
+
+      expect(textOf(page())).toContain('Evento público');
+      expect(page().querySelector('a[href="/events/new"]')).toBeNull();
+    });
+
+    it('should load the catalog of the new account after switching users', async () => {
+      await open('/events', TEST_USERS.organizer);
+      listRequest().flush(buildPage([buildEvent({ id: 1, name: 'Borrador de Olga' })]));
+      await settle();
+
+      TestBed.inject(AuthService).logout();
+      await settle();
+      listRequest().flush(buildPage([]));
+      signInAs(TEST_USERS.otherOrganizer);
+      await settle();
+
+      const request = listRequest();
+      expect(request.request.headers.get('Authorization')).toBe(
+        `Bearer token-${TEST_USERS.otherOrganizer.id}`,
+      );
+      request.flush(buildPage([buildEvent({ id: 5, name: 'Borrador de Oscar' })]));
+      await settle();
+
+      expect(textOf(page())).toContain('Borrador de Oscar');
+      expect(textOf(page())).not.toContain('Borrador de Olga');
+    });
+
+    it('should cancel an outdated request when the page changes before it answers', async () => {
+      await open('/events');
+      listRequest().flush(buildPage([buildEvent()], { total: 30, pages: 4 }));
+      await settle();
+
+      await TestBed.inject(Router).navigateByUrl('/events?page=2');
+      const outdated = listRequest();
+      await TestBed.inject(Router).navigateByUrl('/events?page=3');
+      const current = listRequest();
+
+      expect(outdated.cancelled).toBeTrue();
+      current.flush(buildPage([buildEvent({ name: 'Página 3' })], { page: 3, pages: 4 }));
+      await settle();
+
+      expect(textOf(page())).toContain('Página 3');
+    });
   });
 
   describe('create event button', () => {

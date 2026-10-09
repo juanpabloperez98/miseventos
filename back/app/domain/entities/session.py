@@ -31,8 +31,11 @@ class Session:
         return TimeRange(self.start_time, self.end_time)
 
     def ensure_fits_within(self, event: Event) -> None:
+        """The session must take place within the event schedule and fit in its capacity."""
         if not event.schedule.contains(self.schedule):
             raise InvalidValueError("Session must take place within the event schedule")
+        if self.capacity > event.capacity:
+            raise InvalidValueError("Session capacity cannot exceed the event capacity")
 
     def with_details(
         self,

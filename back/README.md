@@ -336,6 +336,7 @@ pytest --cov=app --cov-report=html     # report in htmlcov/
 | DELETE | `/api/sessions/{id}` | Bearer (ADMIN, event owner) | Delete the session (204) |
 | POST | `/api/events/{event_id}/registrations` | Bearer | Register the authenticated user to the event (201) |
 | GET | `/api/me/registrations` | Bearer | Events the authenticated user is registered to |
+| GET | `/api/speakers` | optional | Read-only speaker catalog ordered by name (`?page=`, `?per_page=` max 100); `id`, `name`, `bio` (no email) |
 
 ### Authentication rules
 
@@ -416,11 +417,11 @@ authentication → 401, authorization → 403. Unexpected errors return
 
 ### Roadmap
 
-Ports, repositories and domain rules for these endpoints already exist; the next phase adds the
-use cases and routes:
+`GET /api/speakers` (read-only, used to assign speakers to sessions) is available. Ports,
+repositories and domain rules for managing speakers already exist; a later phase could add:
 
 ```text
-GET/POST       /api/speakers, PUT/DELETE /api/speakers/{id}
+POST /api/speakers, PUT/DELETE /api/speakers/{id}
 ```
 
 ## Key design decisions

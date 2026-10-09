@@ -13,6 +13,7 @@ import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from 
 
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
+import { provideSessionExpiryRedirect } from './core/auth/session-expiry';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 registerLocaleData(localeEs);
@@ -31,5 +32,7 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es' },
     // Restore the session of this tab before the first navigation, so guards see the real state.
     provideAppInitializer(() => inject(AuthService).restoreSession()),
+    // Sends the user to the login page if the session ends while on a protected page.
+    provideSessionExpiryRedirect(),
   ],
 };

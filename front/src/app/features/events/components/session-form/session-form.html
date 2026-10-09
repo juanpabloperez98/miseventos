@@ -1,0 +1,71 @@
+<form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-form-field
+    class="form__full"
+    label="Título de la sesión"
+    [control]="form.controls.title"
+    [required]="true"
+    [maxLength]="limits.titleMaxLength"
+  />
+
+  <app-form-field
+    class="form__full"
+    label="Descripción"
+    type="textarea"
+    [control]="form.controls.description"
+    [rows]="4"
+    [maxLength]="limits.descriptionMaxLength"
+    hint="Opcional."
+  />
+
+  <app-form-field
+    label="Inicio"
+    type="datetime-local"
+    [control]="form.controls.start_time"
+    [required]="true"
+    [min]="bounds().min"
+    [max]="bounds().max"
+    [messages]="messages()"
+    [hint]="'Horario del evento: ' + (event().start_date | dateRange: event().end_date)"
+  />
+
+  <app-form-field
+    label="Finalización"
+    type="datetime-local"
+    [control]="form.controls.end_time"
+    [required]="true"
+    [min]="bounds().min"
+    [max]="bounds().max"
+    [messages]="messages()"
+  />
+
+  <app-form-field
+    label="Capacidad"
+    type="number"
+    [control]="form.controls.capacity"
+    [required]="true"
+    [min]="1"
+    [max]="maxCapacity()"
+    [messages]="messages()"
+    [hint]="'Máximo ' + maxCapacity().toLocaleString('es') + ' personas (capacidad del evento).'"
+  />
+
+  <app-form-field
+    label="Ponente"
+    type="select"
+    [control]="form.controls.speaker_id"
+    [options]="speakerOptions()"
+    hint="Opcional. Ponentes registrados en la plataforma."
+  />
+
+  <div class="form__actions form__full">
+    <button appButton type="button" variant="ghost" (click)="cancelled.emit()">Cancelar</button>
+    <button
+      appButton
+      type="submit"
+      [loading]="submitting()"
+      [disabled]="submitting() || capacityOutOfRange()"
+    >
+      {{ submitting() ? 'Guardando…' : submitLabel() }}
+    </button>
+  </div>
+</form>

@@ -9,7 +9,8 @@ import {
   TEST_API_URL,
   TEST_USERS,
 } from '../../../testing/test-helpers';
-import { AuthService } from './auth.service';
+import { FlashMessageService } from '../services/flash-message.service';
+import { AuthService, type SessionEndReason } from './auth.service';
 import { TokenStorage } from './token-storage';
 
 describe('AuthService', () => {
@@ -125,6 +126,71 @@ describe('AuthService', () => {
 
       expect(auth.user()).toBeNull();
       expect(TestBed.inject(TokenStorage).read()?.value).toBe('stored-token');
+    });
+  });
+
+  describe('session end', () => {
+    let reasons: SessionEndReason[];
+
+    beforeEach(() => {
+      reasons = [];
+      auth.sessionEnded$.subscribe((reason) => reasons.push(reason));
+    });
+
+    it('should end the session when the token reaches its expiry time', () => {
+      jasmine.clock().install();
+      jasmine.clock().mockDate(new Date());
+      try {
+        signInAs(TEST_USERS.organizer);
+        jasmine.clock().tick(60 * 60 * 1000 - 1000);
+        expect(auth.isAuthenticated()).toBeTrue();
+
+        jasmine.clock().tick(2000);
+
+        expect(auth.user()).toBeNull();
+        expect(auth.accessToken()).toBeNull();
+        expect(reasons).toEqual(['expired']);
+      } finally {
+        jasmine.clock().uninstall();
+      }
+    });
+
+    it('should notify a rejected session only once for concurrent 401 responses', () => {
+      signInAs(TEST_USERS.attendee);
+
+      auth.handleRejectedToken();
+      auth.handleRejectedToken();
+      auth.handleRejectedToken();
+
+      expect(reasons).toEqual(['rejected']);
+      expect(auth.isAuthenticated()).toBeFalse();
+    });
+
+    it('should report a logout and drop flash messages meant for the previous user', () => {
+      signInAs(TEST_USERS.attendee);
+      TestBed.inject(FlashMessageService).set('success', '¡Te damos la bienvenida, Ana!');
+
+      auth.logout();
+
+      expect(reasons).toEqual(['logout']);
+      expect(TestBed.inject(FlashMessageService).consume()).toBeNull();
+    });
+
+    it('should not notify anything when there was no session', () => {
+      auth.logout();
+      auth.handleRejectedToken();
+
+      expect(reasons).toEqual([]);
+    });
+
+    it('should start a clean session for the next account', () => {
+      signInAs(TEST_USERS.organizer);
+      auth.logout();
+
+      signInAs(TEST_USERS.attendee);
+
+      expect(auth.user()).toEqual(TEST_USERS.attendee);
+      expect(auth.accessToken()).toBe(`token-${TEST_USERS.attendee.id}`);
     });
   });
 

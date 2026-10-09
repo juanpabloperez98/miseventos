@@ -187,7 +187,8 @@ class SeedInitialDataUseCase:
         try:
             session.ensure_fits_within(event)
         except InvalidValueError:
-            # The event schedule was edited manually; never move the event to fit seed data.
+            # The event schedule or capacity was edited manually; never change the event to fit
+            # seed data.
             logger.warning(
                 "seed_session_skipped",
                 extra={

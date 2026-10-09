@@ -57,6 +57,12 @@
   }
 }
 
+.event__aside {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
 .facts {
   display: grid;
   gap: var(--space-4);
@@ -116,4 +122,16 @@
     justify-content: flex-end;
     gap: var(--space-3);
   }
+}
+
+.sessions__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sessions__note {
+  margin-bottom: var(--space-4);
 }

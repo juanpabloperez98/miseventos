@@ -1,0 +1,70 @@
+<header class="profile" aria-labelledby="profile-title">
+  <h1 id="profile-title" class="profile__title">Mi perfil</h1>
+  @if (user(); as current) {
+    <div class="profile__card">
+      <span class="profile__avatar" aria-hidden="true">{{ current.name.charAt(0) }}</span>
+      <dl class="profile__data">
+        <div>
+          <dt>Nombre</dt>
+          <dd>{{ current.name }}</dd>
+        </div>
+        <div>
+          <dt>Correo electrónico</dt>
+          <dd>{{ current.email }}</dd>
+        </div>
+        <div>
+          <dt>Rol</dt>
+          <dd>{{ roleLabel() }}</dd>
+        </div>
+      </dl>
+    </div>
+  }
+</header>
+
+<section class="registrations" aria-labelledby="registrations-title">
+  @let current = state();
+
+  <div class="registrations__header">
+    <h2 id="registrations-title" class="registrations__title">Mis eventos</h2>
+    @if (current.status === 'success') {
+      <p class="registrations__count" aria-live="polite">
+        {{ current.data.length }} {{ current.data.length === 1 ? 'inscripción' : 'inscripciones' }}
+      </p>
+    }
+  </div>
+
+  @if (current.status === 'loading') {
+    <app-loading label="Cargando tus inscripciones…" />
+  } @else if (current.status === 'error') {
+    @if (current.error.status === 401) {
+      <app-error-state
+        title="Tu sesión ha terminado"
+        message="Inicia sesión de nuevo para ver tus inscripciones."
+        [retryable]="false"
+      >
+        <a appButton routerLink="/auth/login" [queryParams]="{ returnUrl: '/profile' }">
+          Iniciar sesión
+        </a>
+      </app-error-state>
+    } @else {
+      <app-error-state
+        title="No se pudieron cargar tus inscripciones"
+        [message]="describe(current.error)"
+        (retry)="retry()"
+      />
+    }
+  } @else if (current.data.length === 0) {
+    <app-empty-state
+      title="Aún no te has inscrito en ningún evento"
+      message="Cuando te inscribas en un evento aparecerá aquí."
+    >
+      <a appButton routerLink="/events" variant="secondary">Explorar eventos</a>
+    </app-empty-state>
+  } @else {
+    <ul class="registrations__grid" aria-labelledby="registrations-title">
+      @for (event of current.data; track event.id) {
+        <li><app-event-card [event]="event" /></li>
+      }
+    </ul>
+  }
+</section>

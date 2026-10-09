@@ -1,0 +1,69 @@
+<ol class="sessions">
+  @for (session of sessions(); track session.id) {
+    <li class="session">
+      <p class="session__time">
+        <time [attr.datetime]="session.start_time">{{
+          session.start_time | dateRange: session.end_time
+        }}</time>
+      </p>
+      <h3 class="session__title">{{ session.title }}</h3>
+      @if (session.speaker_id !== null) {
+        <p class="session__speaker">
+          Ponente: {{ speakerNames().get(session.speaker_id) ?? 'Ponente asignado' }}
+        </p>
+      }
+      @if (session.description) {
+        <p class="session__description">{{ session.description }}</p>
+      }
+      <p class="session__capacity">Capacidad: {{ session.capacity | number }} personas</p>
+
+      @if (manageable()) {
+        @if (confirmingId() === session.id) {
+          <div
+            class="session__confirm"
+            role="alertdialog"
+            [attr.aria-label]="'Eliminar ' + session.title"
+          >
+            <p>¿Eliminar esta sesión? Esta acción no se puede deshacer.</p>
+            <div class="session__actions">
+              <button
+                appButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                (click)="confirmingId.set(null)"
+              >
+                Volver
+              </button>
+              <button appButton type="button" variant="danger" size="sm" (click)="confirm(session)">
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="session__actions">
+            <a
+              appButton
+              variant="secondary"
+              size="sm"
+              [routerLink]="['/events', session.event_id, 'sessions', session.id, 'edit']"
+            >
+              Editar
+            </a>
+            <button
+              appButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              [loading]="removingId() === session.id"
+              [disabled]="removingId() !== null"
+              (click)="confirmingId.set(session.id)"
+            >
+              Eliminar
+            </button>
+          </div>
+        }
+      }
+    </li>
+  }
+</ol>

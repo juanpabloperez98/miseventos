@@ -84,6 +84,15 @@ class TestSession:
         with pytest.raises(InvalidValueError, match="within the event"):
             session.ensure_fits_within(build_event())
 
+    @pytest.mark.parametrize("capacity", [1, 99, 100])
+    def test_capacity_up_to_the_event_capacity_fits(self, capacity: int) -> None:
+        build_session(capacity=capacity).ensure_fits_within(build_event(capacity=100))
+
+    @pytest.mark.parametrize("capacity", [101, 500])
+    def test_rejects_capacity_above_the_event_capacity(self, capacity: int) -> None:
+        with pytest.raises(InvalidValueError, match="cannot exceed the event capacity"):
+            build_session(capacity=capacity).ensure_fits_within(build_event(capacity=100))
+
 
 class TestSessionDetailsUpdate:
     def test_returns_revalidated_copy_keeping_identity_and_event(self) -> None:

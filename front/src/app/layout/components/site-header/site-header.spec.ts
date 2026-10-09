@@ -70,6 +70,24 @@ describe('SiteHeader', () => {
     expect(element().querySelector('a[href="/auth/login"]')).not.toBeNull();
   });
 
+  it('should show the profile link only to signed-in users', async () => {
+    await render(TEST_USERS.attendee);
+    const profileLink = () => element().querySelector('nav a[href="/profile"]');
+    expect(textOf(profileLink())).toBe('Mi perfil');
+
+    [...element().querySelectorAll('button')]
+      .find((button) => textOf(button) === 'Cerrar sesión')
+      ?.click();
+    await fixture.whenStable();
+
+    expect(profileLink()).toBeNull();
+  });
+
+  it('should not show the profile link to anonymous users', async () => {
+    await render();
+    expect(element().querySelector('a[href="/profile"]')).toBeNull();
+  });
+
   it('should toggle the mobile menu with aria-expanded', async () => {
     await render();
     const toggle = element().querySelector<HTMLButtonElement>('.menu-toggle')!;
