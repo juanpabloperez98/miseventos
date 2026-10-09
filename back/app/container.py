@@ -20,6 +20,7 @@ from app.application.use_cases.registrations import (
     ListMyRegisteredEventsUseCase,
     RegisterForEventUseCase,
 )
+from app.application.use_cases.seeding import SeedInitialDataUseCase
 from app.application.use_cases.sessions import (
     CreateSessionUseCase,
     DeleteSessionUseCase,
@@ -32,6 +33,7 @@ from app.infrastructure.config import Settings
 from app.infrastructure.database.repositories import (
     SqlAlchemyEventRepository,
     SqlAlchemyRegistrationRepository,
+    SqlAlchemySeedRecordRepository,
     SqlAlchemySessionRepository,
     SqlAlchemySpeakerRepository,
     SqlAlchemyUserRepository,
@@ -168,6 +170,17 @@ class RequestScope:
 
     def list_my_registered_events(self) -> ListMyRegisteredEventsUseCase:
         return ListMyRegisteredEventsUseCase(SqlAlchemyEventRepository(self._session))
+
+    def seed_initial_data(self) -> SeedInitialDataUseCase:
+        return SeedInitialDataUseCase(
+            SqlAlchemyUserRepository(self._session),
+            SqlAlchemySpeakerRepository(self._session),
+            SqlAlchemyEventRepository(self._session),
+            SqlAlchemySessionRepository(self._session),
+            SqlAlchemySeedRecordRepository(self._session),
+            self._container.password_hasher,
+            SqlAlchemyUnitOfWork(self._session),
+        )
 
     def close(self) -> None:
         self._session.close()

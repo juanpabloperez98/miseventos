@@ -16,6 +16,7 @@ class ConfigurationError(Exception):
 class Environment(StrEnum):
     DEVELOPMENT = "development"
     TESTING = "testing"
+    PRODUCTION = "production"
 
 
 @dataclass(frozen=True, slots=True)

@@ -58,6 +58,14 @@ def test_rejects_invalid_values(key: str, value: str, message: str) -> None:
         Settings.from_env({**VALID_ENV, key: value})
 
 
+def test_reads_production_environment() -> None:
+    settings = Settings.from_env({**VALID_ENV, "FLASK_ENV": "production"})
+
+    assert settings.environment is Environment.PRODUCTION
+    assert not settings.debug
+    assert not settings.testing
+
+
 def test_repr_does_not_leak_secrets() -> None:
     settings = Settings.from_env(VALID_ENV)
 

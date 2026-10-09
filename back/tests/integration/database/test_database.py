@@ -3,7 +3,7 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, Engine, inspect, text
 
-EXPECTED_TABLES = {"users", "events", "registrations", "speakers", "sessions"}
+EXPECTED_TABLES = {"users", "events", "registrations", "speakers", "sessions", "seed_records"}
 
 
 def test_connects_to_postgresql(connection: Connection) -> None:

@@ -9,6 +9,8 @@ from app.domain.ports import (
     EventSearchCriteria,
     EventVisibility,
     RegistrationRepository,
+    SeedRecord,
+    SeedRecordRepository,
     SessionRepository,
     SpeakerRepository,
     UnitOfWork,
@@ -190,3 +192,14 @@ class SpyUnitOfWork(UnitOfWork):
 
     def rollback(self) -> None:
         self.rollbacks += 1
+
+
+class InMemorySeedRecordRepository(SeedRecordRepository):
+    def __init__(self) -> None:
+        self.records: dict[str, SeedRecord] = {}
+
+    def get(self, seed_key: str) -> SeedRecord | None:
+        return self.records.get(seed_key)
+
+    def save(self, record: SeedRecord) -> None:
+        self.records[record.seed_key] = record

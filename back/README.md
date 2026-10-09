@@ -69,12 +69,13 @@ back/
 │   ├── application/
 │   │   ├── dto/               # commands, queries and output DTOs
 │   │   ├── services/          # AuthorizationService (RBAC), EventAccessPolicy (ownership)
-│   │   └── use_cases/         # auth/, events/ (create, get, list, update, delete)
+│   │   └── use_cases/         # auth/, events/, sessions/, registrations/, seeding/
 │   ├── infrastructure/
 │   │   ├── config/            # Settings loaded from environment variables
 │   │   ├── database/          # base, session, models/, repositories/, unit_of_work
 │   │   ├── security/          # JwtTokenService, Sha256PasswordHasher
 │   │   └── logging_config.py  # structured JSON logging
+│   ├── adapters/cli/          # flask seed-initial-data command
 │   ├── adapters/http/
 │   │   ├── routes/            # health, auth, events blueprints
 │   │   ├── schemas/           # marshmallow request/response schemas
@@ -124,7 +125,7 @@ cp .env.example .env             # Docker Compose (repository root)
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `FLASK_ENV` | no | `development` (default) or `testing` |
+| `FLASK_ENV` | no | `development` (default), `testing` or `production` |
 | `DATABASE_URL` | yes | SQLAlchemy URL, e.g. `postgresql+psycopg://user:pass@localhost:5432/miseventos` |
 | `TEST_DATABASE_URL` | for integration tests | Must point to a database whose name ends in `_test` (created automatically) |
 | `JWT_SECRET_KEY` | yes | At least 32 characters |
@@ -133,6 +134,7 @@ cp .env.example .env             # Docker Compose (repository root)
 | `LOG_LEVEL` | no | `DEBUG`, `INFO` (default), `WARNING`, `ERROR`, `CRITICAL` |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes (Docker) | PostgreSQL container credentials (root `.env`) |
 | `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` | no | Host ports published by Compose (root `.env`, defaults `5432` / `5000`) |
+| `SEED_*` | no | Initial data seeder, see [Seed data](#seed-data) |
 
 The application refuses to start if a required variable is missing or invalid. Inside Docker
 Compose, `DATABASE_URL` and `TEST_DATABASE_URL` are rebuilt from the `POSTGRES_*` variables so the
@@ -148,9 +150,17 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Compose starts PostgreSQL, waits for its health check, then starts the backend, which runs
-`alembic upgrade head` and the Flask development server with hot reload (the source folder is
-mounted into the container).
+Compose starts PostgreSQL and waits for its health check. The backend container then runs, in
+order and stopping at the first failure:
+
+1. `alembic upgrade head` — apply migrations.
+2. `flask --app app.bootstrap:create_app seed-initial-data` — create missing seed data (see
+   [Seed data](#seed-data)).
+3. `flask --app app.bootstrap:create_app run --debug` — the development server with hot reload
+   (the source folder is mounted into the container).
+
+If migrations or seeding fail, the container exits with a non-zero code instead of serving a
+half-initialized API.
 
 All `docker compose` commands below are run from the repository root.
 
@@ -179,8 +189,95 @@ postgres`).
 ```bash
 poetry install
 poetry run alembic upgrade head
+poetry run flask --app app.bootstrap:create_app seed-initial-data   # optional
 poetry run flask --app app.bootstrap:create_app run --debug
 ```
+
+## Seed data
+
+`flask seed-initial-data` creates data for manual testing. Docker runs it on every start, after
+the migrations and before the server. It only creates what is missing, so restarting the container
+never duplicates data.
+
+### What is created
+
+| Data | Details |
+| --- | --- |
+| Users | One `ADMIN`, one `ORGANIZER` and one `ATTENDEE`, from the `SEED_*` variables |
+| Speakers | 3 speakers (`app/application/use_cases/seeding/catalog.py`) |
+| Events | 4 events owned by the seed organizer: 2 `PUBLISHED` (upcoming, with free seats), 1 `DRAFT` (upcoming), 1 `COMPLETED` (past) |
+| Sessions | 7 sessions with speakers, inside their event's schedule |
+| Registrations | None, so the registration flow can be tried by hand |
+
+Event dates are relative to the day each event is first seeded. Statuses are reached through the
+normal transitions (`DRAFT → PUBLISHED → COMPLETED`).
+
+### Configuring the seed users
+
+Set these variables in `back/.env` (`back/.env.example` has placeholder values):
+
+| Variable | Description |
+| --- | --- |
+| `SEED_ADMIN_ENABLED` / `SEED_ORGANIZER_ENABLED` / `SEED_ATTENDEE_ENABLED` | `true` to create that user. Default `false` |
+| `SEED_<ROLE>_NAME` / `SEED_<ROLE>_EMAIL` / `SEED_<ROLE>_PASSWORD` | Required when the user is enabled. Password: 8–128 characters |
+| `SEED_DEMO_DATA_ENABLED` | `true` to create speakers, events and sessions. Requires `SEED_ORGANIZER_ENABLED=true`. Default `false` |
+
+Replace the placeholder passwords before sharing an environment. Passwords are hashed with the
+existing `PasswordHasher` (salted SHA-256) and never logged.
+
+**Changing credentials.** The seeder never modifies an existing user. Changing a `SEED_*` value
+only affects users created afterwards:
+
+- To use a new email, change `SEED_<ROLE>_EMAIL` and restart. A new user is created; the old one
+  is left untouched.
+- To change the password of an existing seed user, update it in the database (there is no
+  password-change endpoint yet). Alternatively, recreate the development database with
+  `docker compose down -v`, which deletes all data.
+
+**Existing emails.** If a seed email already belongs to a user, that user is kept as it is. Its
+name, password and role are not changed, and it is never promoted. A role mismatch logs a
+`seed_user_role_mismatch` warning. If the organizer email belongs to a non-organizer, demo data is
+skipped with a `seed_demo_data_skipped` warning. Public registration always creates `ATTENDEE`
+users.
+
+### How idempotency works
+
+- **Users** are matched by their normalized email (`strip().lower()`, the same rule as
+  registration). The unique index on `users.email` is the final guard.
+- **Speakers, events and sessions** each have a stable key, for example
+  `event:bogota-python-summit`. The `seed_records` table maps each key to the id of the row created
+  for it:
+  - **Key recorded and row exists:** nothing happens. Manual edits (name, dates, status…) are kept.
+  - **Key missing, or row deleted:** only that row is created, and the key points to the new id.
+    Deleting a seed event or session by hand makes it come back on the next start. Deleting an event
+    also deletes its sessions, so they are recreated with it.
+  - **Session that no longer fits its event:** if a seed session is missing but no longer fits its
+    manually edited event, it is skipped with a `seed_session_skipped` warning. Events are never
+    moved.
+- Relations use the real ids read from the database, never assumed ids.
+- Everything runs in one transaction. On any error nothing is saved, and the command exits with a
+  non-zero code and a clear message.
+
+### Running it manually
+
+```bash
+docker compose exec backend flask --app app.bootstrap:create_app seed-initial-data
+poetry run flask --app app.bootstrap:create_app seed-initial-data      # outside Docker
+```
+
+The output summarizes the result, for example
+`Initial data ready: users created=0 existing=3; demo records created=0 existing=14 skipped=0`.
+
+### Disabling it
+
+Set the `SEED_*_ENABLED` variables to `false`, or remove them, since every seed is disabled by
+default. With everything disabled, the command creates nothing and Docker starts normally. Seeding
+never runs from `create_app()`, so tests, other CLI commands and the reloader never trigger it.
+
+### Production protection
+
+The command refuses to run when `FLASK_ENV=production`. It exits with a non-zero code and makes no
+database changes. Do not enable seed users with known passwords in any shared environment.
 
 ## Migrations
 
@@ -357,6 +454,6 @@ GET/POST       /api/speakers, PUT/DELETE /api/speakers/{id}
   sets `sessions.speaker_id` to `NULL`.
 - **Structured logging**: JSON lines on stdout. Every record carries the telemetry namespace
   `miseventos.events.v1`. Passwords, tokens and secrets are never logged.
-- **Development-only Docker setup**: Flask development server with hot reload, migrations on
-  start-up. A production setup (WSGI server, `docker-compose.prod.yml`) is out of scope for this
+- **Development-only Docker setup**: Flask development server with hot reload, migrations and
+  idempotent seeding on start-up. A production setup (WSGI server, `docker-compose.prod.yml`) is out of scope for this
   phase.

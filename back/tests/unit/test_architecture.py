@@ -73,6 +73,7 @@ def test_concrete_adapters_implement_domain_ports() -> None:
         repositories.SqlAlchemyRegistrationRepository: ports.RegistrationRepository,
         repositories.SqlAlchemySpeakerRepository: ports.SpeakerRepository,
         repositories.SqlAlchemySessionRepository: ports.SessionRepository,
+        repositories.SqlAlchemySeedRecordRepository: ports.SeedRecordRepository,
         unit_of_work.SqlAlchemyUnitOfWork: ports.UnitOfWork,
         Sha256PasswordHasher: ports.PasswordHasher,
         JwtTokenService: ports.TokenService,

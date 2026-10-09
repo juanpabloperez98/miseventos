@@ -6,6 +6,7 @@ from app.application.dto.events import (
     ListEventsQuery,
     UpdateEventCommand,
 )
+from app.application.dto.seeding import SeedInitialDataCommand, SeedReport, SeedUser
 from app.application.dto.sessions import (
     CreateSessionCommand,
     SessionDetails,
@@ -21,6 +22,9 @@ __all__ = [
     "ListEventsQuery",
     "LoginCommand",
     "RegisterUserCommand",
+    "SeedInitialDataCommand",
+    "SeedReport",
+    "SeedUser",
     "SessionDetails",
     "UpdateEventCommand",
     "UpdateSessionCommand",

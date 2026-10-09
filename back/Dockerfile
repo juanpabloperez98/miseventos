@@ -27,4 +27,5 @@ USER appuser
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "alembic upgrade head && flask --app app.bootstrap:create_app run --host 0.0.0.0 --port 5000 --debug"]
+# Migrations and seeding run before the server; if either fails the container exits.
+CMD ["sh", "-c", "alembic upgrade head && flask --app app.bootstrap:create_app seed-initial-data && flask --app app.bootstrap:create_app run --host 0.0.0.0 --port 5000 --debug"]
