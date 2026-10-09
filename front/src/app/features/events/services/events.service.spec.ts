@@ -3,11 +3,14 @@ import { TestBed } from '@angular/core/testing';
 
 import {
   buildEvent,
+  buildPage,
   cleanUpAuth,
   provideTestDependencies,
+  signInAs,
   TEST_API_URL,
+  TEST_USERS,
 } from '../../../../testing/test-helpers';
-import { EventsService } from './events.service';
+import { EVENT_LIST_CACHE_TTL_MS, EventsService } from './events.service';
 
 describe('EventsService', () => {
   let service: EventsService;
@@ -72,5 +75,122 @@ describe('EventsService', () => {
     http.expectOne(`${TEST_API_URL}/events/10`).flush(cancelled);
 
     expect(result).toEqual(cancelled);
+  });
+
+  describe('catalog cache', () => {
+    const query = { page: 1, perPage: 9 };
+    const listRequests = () => http.match((req) => req.url === `${TEST_API_URL}/events`);
+    const page = buildPage([buildEvent()]);
+    const { id, name, description, location, start_date, end_date, capacity } = buildEvent();
+    const payload = { name, description, location, start_date, end_date, capacity };
+
+    /** Loads the catalog once, so the next identical request can come from the cache. */
+    function loadCatalog(): void {
+      service.list(query).subscribe();
+      const [request] = listRequests();
+      request.flush(page);
+    }
+
+    beforeEach(() => {
+      jasmine.clock().install();
+      jasmine.clock().mockDate(new Date('2030-05-10T15:00:00Z'));
+    });
+
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('should send a single request for identical concurrent calls', () => {
+      const received: unknown[] = [];
+      service.list(query).subscribe((value) => received.push(value));
+      service.list({ ...query, search: '' }).subscribe((value) => received.push(value));
+
+      const requests = listRequests();
+      expect(requests.length).toBe(1);
+      requests[0].flush(page);
+      expect(received).toEqual([page, page]);
+    });
+
+    it('should reuse the response for 60 seconds and then request it again', () => {
+      loadCatalog();
+
+      jasmine.clock().tick(EVENT_LIST_CACHE_TTL_MS - 1);
+      let reused: unknown;
+      service.list(query).subscribe((value) => (reused = value));
+      expect(reused).toEqual(page);
+      expect(listRequests().length).toBe(0);
+
+      jasmine.clock().tick(1);
+      service.list(query).subscribe();
+      expect(listRequests().length).toBe(1);
+    });
+
+    it('should request different pages and searches separately', () => {
+      loadCatalog();
+      service.list({ ...query, page: 2 }).subscribe();
+      service.list({ ...query, search: 'angular' }).subscribe();
+
+      expect(listRequests().length).toBe(2);
+    });
+
+    it('should not keep a failed response', () => {
+      service.list(query).subscribe({ error: () => undefined });
+      listRequests()[0].flush(null, { status: 500, statusText: 'Server Error' });
+
+      service.list(query).subscribe();
+      expect(listRequests().length).toBe(1);
+    });
+
+    it('should not share the catalog between sessions', () => {
+      loadCatalog();
+      signInAs(TEST_USERS.organizer);
+
+      service.list(query).subscribe();
+      expect(listRequests().length).toBe(1);
+    });
+
+    const changes: [string, () => void][] = [
+      [
+        'creating',
+        () => {
+          service.create(payload).subscribe();
+          http.expectOne({ method: 'POST', url: `${TEST_API_URL}/events` }).flush(buildEvent());
+        },
+      ],
+      [
+        'editing',
+        () => {
+          service.update(id, payload).subscribe();
+          http.expectOne(`${TEST_API_URL}/events/${id}`).flush(buildEvent());
+        },
+      ],
+      [
+        'deleting',
+        () => {
+          service.remove(id).subscribe();
+          http
+            .expectOne(`${TEST_API_URL}/events/${id}`)
+            .flush(null, { status: 204, statusText: 'No Content' });
+        },
+      ],
+    ];
+    for (const [change, perform] of changes) {
+      it(`should request the catalog again after ${change} an event`, () => {
+        loadCatalog();
+        perform();
+
+        service.list(query).subscribe();
+        expect(listRequests().length).toBe(1);
+      });
+    }
+
+    it('should keep the catalog when a change fails', () => {
+      loadCatalog();
+      service.update(id, payload).subscribe({ error: () => undefined });
+      http
+        .expectOne(`${TEST_API_URL}/events/${id}`)
+        .flush({ message: 'Conflict' }, { status: 409, statusText: 'Conflict' });
+
+      service.list(query).subscribe();
+      expect(listRequests().length).toBe(0);
+    });
   });
 });
