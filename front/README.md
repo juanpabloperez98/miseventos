@@ -687,7 +687,10 @@ npm run build          # production build (fails if a budget is exceeded)
 
 `npm run test:coverage` runs `ng test --watch=false --browsers=ChromeHeadless --code-coverage`. It
 prints a summary in the console and writes the HTML report to `coverage/mis-eventos/index.html`
-(ignored by Git).
+(ignored by Git). There is no `karma.conf.js`: the Angular Karma builder uses its default
+configuration, which names the folder after the project. Run the commands from `front/` and open
+the report in a browser, for example `start coverage/mis-eventos/index.html` (Windows), `open`
+(macOS) or `xdg-open` (Linux).
 
 On Windows with `core.autocrlf=true`, Git checks files out with CRLF line endings while Prettier
 expects LF, so `npm run format:check` can report files whose only difference is the line ending.
