@@ -23,11 +23,6 @@ import {
 
 let nextId = 0;
 
-/**
- * Cover image picker of the event form. It only chooses: the page uploads the file after saving
- * the event. Shows the current image (optimized by Cloudinary) or a local preview of the new file,
- * which never leaves the browser until the upload is authorized.
- */
 @Component({
   selector: 'app-event-image-field',
   imports: [Button],
@@ -36,10 +31,8 @@ let nextId = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventImageField {
-  /** Image saved for the event, if any. */
   readonly image = input<EventImage | null>(null);
   readonly disabled = input(false);
-  /** Progress of an upload in course, shown as a live status. */
   readonly status = input<string | null>(null);
 
   readonly selectionChange = output<EventImageSelection>();
@@ -58,7 +51,6 @@ export class EventImageField {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.revokePreview());
-    // Another event loaded in the form: forget the previous choice.
     effect(() => {
       this.image();
       untracked(() => this.reset());
@@ -85,7 +77,6 @@ export class EventImageField {
     this.emit();
   }
 
-  /** Discards the new file, or marks the current image for removal. */
   protected clear(): void {
     this.error.set(null);
     if (this.file()) {

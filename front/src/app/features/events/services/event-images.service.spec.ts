@@ -98,7 +98,6 @@ describe('EventImagesService', () => {
       expect(body.get('public_id')).toBe(SIGNED.public_id);
       expect(body.get('allowed_formats')).toBe('jpg,png,webp');
       expect(body.has('api_secret')).toBeFalse();
-      // The JWT of the API never reaches Cloudinary.
       expect(request.request.headers.has('Authorization')).toBeFalse();
       request.flush({ public_id: SIGNED.public_id });
       confirmation().flush(buildImage());

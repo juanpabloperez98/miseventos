@@ -10,7 +10,6 @@ import {
 import { type SessionPayload } from '../../models/session.model';
 import { SessionForm } from './session-form';
 
-/** Event from 10:00 AM to 6:00 PM in Colombia time (UTC-5), whatever the device timezone. */
 const EVENT = buildEvent({
   start_date: '2030-05-10T15:00:00.000Z',
   end_date: '2030-05-10T23:00:00.000Z',
@@ -119,7 +118,6 @@ describe('SessionForm', () => {
       {
         title: 'Keynote',
         description: null,
-        // 11:00 AM and 12:30 PM in Bogotá.
         start_time: '2030-05-10T16:00:00.000Z',
         end_time: '2030-05-10T17:30:00.000Z',
         capacity: 80,
@@ -131,7 +129,6 @@ describe('SessionForm', () => {
   it('should prefill a session and allow removing its speaker', async () => {
     const session = buildSession({
       title: 'Signals',
-      // 3:00 PM to 4:00 PM in Bogotá.
       start_time: '2030-05-10T20:00:00+00:00',
       end_time: '2030-05-10T21:00:00+00:00',
       speaker_id: 1,
@@ -153,7 +150,6 @@ describe('SessionForm', () => {
     await submit();
 
     expect(emitted[0].speaker_id).toBeNull();
-    // Unchanged schedule: the same instants are sent back, without any shift.
     expect(emitted[0].start_time).toBe('2030-05-10T20:00:00.000Z');
     expect(emitted[0].end_time).toBe('2030-05-10T21:00:00.000Z');
     expect(emitted[0].capacity).toBe(session.capacity);

@@ -129,7 +129,6 @@ describe('ProfilePage', () => {
       { message: 'Invalid or expired token' },
       { status: 401, statusText: 'Unauthorized' },
     );
-    // The interceptor ends the session and retries the GET once without the token.
     http
       .expectOne(`${TEST_API_URL}/me/registrations`)
       .flush({ message: 'Missing bearer token' }, { status: 401, statusText: 'Unauthorized' });
@@ -138,7 +137,6 @@ describe('ProfilePage', () => {
     expect(router.url).toBe('/auth/login?returnUrl=%2Fprofile');
     expect(TestBed.inject(FlashMessageService).consume()?.text).toContain('Tu sesión ha expirado');
     expect(TestBed.inject(AuthService).isAuthenticated()).toBeFalse();
-    // No further requests: verified by HttpTestingController in afterEach.
   });
 
   it('should drop the previous user registrations when the session ends', async () => {

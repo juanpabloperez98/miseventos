@@ -6,11 +6,6 @@ import { Button } from '../../../../shared/components/button/button';
 
 const DEFAULT_REASON = 'No tienes permiso para acceder a esta página.';
 
-/**
- * Access denied (authenticated user without the required role). Rendered at the requested URL by a
- * fallback route (see events.routes.ts), which provides the reason through its route `data`.
- * A guard redirecting here may provide it through the flash message instead.
- */
 @Component({
   selector: 'app-forbidden-page',
   imports: [RouterLink, Button],
@@ -61,7 +56,6 @@ const DEFAULT_REASON = 'No tienes permiso para acceder a esta página.';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ForbiddenPage {
-  /** Route `data.reason`, bound by `withComponentInputBinding()`. */
   readonly reason = input<string>();
 
   private readonly flashReason = inject(FlashMessageService).consume()?.text;

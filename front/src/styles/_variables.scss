@@ -1,14 +1,5 @@
-// Design tokens.
-//
-// Colors, typography, spacing, radii and shadows are exposed at runtime as CSS custom properties
-// (see _global.scss), so components should consume them with `var(--token)`.
-// Breakpoints stay as Sass values because media queries cannot read custom properties.
-
 @use 'sass:map';
 
-// ---------------------------------------------------------------------------
-// Breakpoints (mobile first: each value is a `min-width`)
-// ---------------------------------------------------------------------------
 $breakpoints: (
   sm: 576px,
   md: 768px,
@@ -16,9 +7,6 @@ $breakpoints: (
   xl: 1280px,
 );
 
-// ---------------------------------------------------------------------------
-// Colors (text colors meet WCAG AA contrast on `surface` and `background`)
-// ---------------------------------------------------------------------------
 $colors: (
   primary: #6d28d9,
   primary-hover: #5b21b6,
@@ -38,7 +26,6 @@ $colors: (
 
   focus: #7c3aed,
 
-  // Interface states (loading, empty, error, success...).
   success: #15803d,
   success-subtle: #effbf3,
   warning: #b45309,
@@ -49,12 +36,8 @@ $colors: (
   info-subtle: #eff8ff,
 );
 
-// Brand gradient (violet → indigo → blue). White text keeps AA contrast on every stop.
 $gradient-brand: linear-gradient(135deg, #6d28d9 0%, #4f46e5 55%, #2563eb 100%);
 
-// ---------------------------------------------------------------------------
-// Typography (system font stack: no web font downloads)
-// ---------------------------------------------------------------------------
 $font-family-base:
   system-ui,
   -apple-system,
@@ -89,9 +72,6 @@ $line-heights: (
   base: 1.6,
 );
 
-// ---------------------------------------------------------------------------
-// Spacing scale (4px base)
-// ---------------------------------------------------------------------------
 $spacing: (
   0: 0,
   1: 0.25rem,
@@ -104,9 +84,6 @@ $spacing: (
   8: 4rem,
 );
 
-// ---------------------------------------------------------------------------
-// Borders, radii and elevation
-// ---------------------------------------------------------------------------
 $border-width: 1px;
 
 $radii: (
@@ -125,7 +102,6 @@ $shadows: (
 
 $container-max-width: 72rem;
 
-// Helper to read a breakpoint with a clear error message.
 @function breakpoint($name) {
   @if not map.has-key($breakpoints, $name) {
     @error 'Unknown breakpoint `#{$name}`. Expected one of: #{map.keys($breakpoints)}.';

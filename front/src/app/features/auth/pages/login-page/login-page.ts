@@ -34,7 +34,6 @@ export function safeReturnUrl(value: unknown): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginPage {
-  /** Page to return to after signing in (set by the auth guards). */
   readonly returnUrl = input(DEFAULT_REDIRECT, { transform: safeReturnUrl });
 
   private readonly auth = inject(AuthService);

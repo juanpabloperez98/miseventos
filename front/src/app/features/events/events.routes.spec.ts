@@ -20,7 +20,6 @@ import {
 
 const PERMISSION_MESSAGE = 'Tu cuenta no tiene permiso para gestionar eventos.';
 
-/** Event routes with the real application route tree, guards and layout. */
 describe('Event routes (authentication vs authorization)', () => {
   let harness: RouterTestingHarness;
   let http: HttpTestingController;
@@ -48,7 +47,6 @@ describe('Event routes (authentication vs authorization)', () => {
         expect(rendered().querySelector('app-login-page')).not.toBeNull();
         expect(textOf(rendered())).not.toContain(PERMISSION_MESSAGE);
         expect(textOf(rendered())).not.toContain('Evento no encontrado');
-        // Regression: "create" used to be taken as an event id → GET /events/NaN.
         http.expectNone((req) => req.url.includes('/events/'));
       });
     }
@@ -95,7 +93,6 @@ describe('Event routes (authentication vs authorization)', () => {
         expect(textOf(rendered().querySelector('h1'))).toBe('Acceso denegado');
         expect(textOf(rendered().querySelector('[role="alert"]'))).toBe(PERMISSION_MESSAGE);
         expect(TestBed.inject(Title).getTitle()).toBe('Acceso denegado | Mis Eventos');
-        // Not sent to login nor to the catalog: access denied is shown at the requested URL.
         expect(browserPath()).toBe(url === '/events/create' ? '/events/new' : url);
         expect(router.url).toBe(browserPath());
         expect(router.url).not.toContain('/auth/login');

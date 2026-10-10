@@ -4,17 +4,8 @@ import { RouterLink } from '@angular/router';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { Button } from '../../../../shared/components/button/button';
 
-/**
- * Registration status of the current user for the event shown:
- * - `anonymous`: not signed in (published event) → link to login.
- * - `checking`: loading the user's registrations.
- * - `available`: can try to register (the backend still checks capacity).
- * - `registered`: the user is registered.
- * - `closed`: the event is not published, so the backend does not accept registrations.
- */
 export type RegistrationStatus = 'anonymous' | 'checking' | 'available' | 'registered' | 'closed';
 
-/** Presentational: renders the registration status and emits `register`. */
 @Component({
   selector: 'app-registration-panel',
   imports: [RouterLink, Alert, Button],
@@ -94,7 +85,6 @@ export class RegistrationPanel {
   readonly status = input.required<RegistrationStatus>();
   readonly submitting = input(false);
   readonly error = input<string | null>(null);
-  /** Page to come back to after signing in. */
   readonly returnUrl = input.required<string>();
   readonly register = output();
 }

@@ -3,15 +3,6 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'inverse';
 export type ButtonSize = 'md' | 'sm';
 
-/**
- * Styles a native `<button>` or `<a>`, so native semantics (type, disabled, routerLink, keyboard)
- * are preserved. While `loading` is true it shows a spinner and sets `aria-busy`; the consumer still
- * controls `disabled` to prevent duplicate submissions.
- *
- * @example
- * <button appButton type="submit" [loading]="saving()" [disabled]="saving()">Guardar</button>
- * <a appButton variant="secondary" routerLink="/events">Volver</a>
- */
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector -- attribute selector keeps native semantics.
   selector: 'button[appButton], a[appButton]',

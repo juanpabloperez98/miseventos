@@ -20,7 +20,6 @@ describe('date-time utilities', () => {
   });
 
   describe('formats', () => {
-    // 2:45 PM in Bogotá (UTC-5) is 19:45 UTC.
     const instant = '2026-10-10T19:45:00+00:00';
 
     it('should format dates as dd/MM/yyyy', () => {
@@ -75,9 +74,7 @@ describe('date-time utilities', () => {
 
   describe('Colombia timezone', () => {
     it('should keep the Colombian day for times close to midnight', () => {
-      // 11:30 PM on October 10 in Bogotá is already October 11 in UTC.
       expect(formatAppDateTime('2026-10-11T04:30:00Z')).toBe('10/10/2026, 11:30 PM');
-      // 12:15 AM on October 11 in Bogotá.
       expect(formatAppDateTime('2026-10-11T05:15:00Z')).toBe('11/10/2026, 12:15 AM');
       expect(formatAppDay('2026-10-11T04:30:00Z')).toBe('10');
       expect(formatAppMonth('2026-11-01T04:30:00Z')).toBe('oct');
@@ -103,7 +100,6 @@ describe('date-time utilities', () => {
 
   describe('civil dates', () => {
     it('should not move a date without time to the previous day', () => {
-      // `new Date('2026-10-10')` is midnight UTC, i.e. October 9 in Bogotá.
       expect(formatAppDate('2026-10-10')).toBe('10/10/2026');
       expect(formatAppDay('2026-10-01')).toBe('1');
       expect(formatAppMonth('2026-11-01')).toBe('nov');
@@ -152,7 +148,6 @@ describe('date-time utilities', () => {
     });
 
     it('should treat a range ending before midnight in Colombia as a single day', () => {
-      // Ends on October 11 in UTC but at 11:00 PM on October 10 in Bogotá.
       expect(formatAppDateRange('2026-10-10T23:00:00Z', '2026-10-11T04:00:00Z')).toBe(
         '10/10/2026 · 6:00 PM – 11:00 PM',
       );

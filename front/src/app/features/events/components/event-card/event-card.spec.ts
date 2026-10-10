@@ -84,7 +84,6 @@ describe('EventCard', () => {
 
     expect(image().getAttribute('src')).toBe(DEFAULT_EVENT_COVER);
     expect(image().hasAttribute('srcset')).toBeFalse();
-    // The event data is not modified.
     expect(event.image).toEqual(buildImage());
   });
 

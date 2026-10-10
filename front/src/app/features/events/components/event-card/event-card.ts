@@ -8,7 +8,6 @@ import { IMAGE_VARIANTS, responsiveImage } from '../../../../shared/utils/cloudi
 import { type EventModel } from '../../models/event.model';
 import { EventStatusBadge } from '../event-status-badge/event-status-badge';
 
-/** Local cover (in `public/`) for events without image or whose image cannot be loaded. */
 export const DEFAULT_EVENT_COVER = 'images/event-cover-default.svg';
 
 interface CardPicture {
@@ -31,7 +30,6 @@ const DEFAULT_PICTURE: CardPicture = {
   isDefault: true,
 };
 
-/** Event summary. The whole card is clickable through the title link (stretched link). */
 @Component({
   selector: 'app-event-card',
   imports: [RouterLink, AppDatePipe, DecimalPipe, DateRangePipe, EventStatusBadge],
@@ -42,10 +40,8 @@ const DEFAULT_PICTURE: CardPicture = {
 export class EventCard {
   readonly event = input.required<EventModel>();
 
-  /** Cloudinary URL that failed to load; another event (or image) is tried again. */
   private readonly failedUrl = signal<string | null>(null);
 
-  /** Optimized Cloudinary cover, or the local default one. The event data is never changed. */
   protected readonly picture = computed<CardPicture>(() => {
     const url = this.event().image?.secure_url?.trim();
     if (!url || url === this.failedUrl()) {

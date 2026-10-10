@@ -23,16 +23,11 @@ import {
 } from '../app/features/events/models/event.model';
 import { type EventSession } from '../app/features/events/models/session.model';
 
-/** Placeholder routed component for destinations a test only navigates to. */
 @Component({ template: '', changeDetection: ChangeDetectionStrategy.OnPush })
 export class BlankPage {}
 
 export const TEST_API_URL = 'http://api.test/api';
 
-/**
- * Real HttpClient (with the auth interceptor) against `HttpTestingController`, real router and the
- * same session-expiry handling as the application.
- */
 export function provideTestDependencies(routes: Routes = []): (Provider | EnvironmentProviders)[] {
   return [
     provideZonelessChangeDetection(),
@@ -40,7 +35,6 @@ export function provideTestDependencies(routes: Routes = []): (Provider | Enviro
     provideHttpClientTesting(),
     provideRouter(routes, withComponentInputBinding()),
     { provide: API_URL, useValue: TEST_API_URL },
-    // Same session-expiry behavior as the application (app.config.ts).
     provideSessionExpiryRedirect(),
   ];
 }
@@ -52,7 +46,6 @@ export const TEST_USERS = {
   attendee: { id: 4, name: 'Ana Attendee', email: 'attendee@test.dev', role: 'ATTENDEE' },
 } satisfies Record<string, User>;
 
-/** Signs in through the real `AuthService`, answering the login and `/auth/me` requests. */
 export function signInAs(user: User): void {
   const http = TestBed.inject(HttpTestingController);
   TestBed.inject(AuthService).login({ email: user.email, password: 'password123' }).subscribe();
@@ -64,7 +57,6 @@ export function signInAs(user: User): void {
   http.expectOne(`${TEST_API_URL}/auth/me`).flush(user);
 }
 
-/** Clears the token persisted in `sessionStorage` and checks there are no unexpected requests. */
 export function cleanUpAuth(): void {
   TestBed.inject(HttpTestingController).verify();
   TestBed.inject(TokenStorage).clear();
@@ -104,10 +96,6 @@ export function buildSession(overrides: Partial<EventSession> = {}): EventSessio
   };
 }
 
-/**
- * Fills the `app-date-time-input` inside `container` with a `yyyy-MM-ddTHH:mm` value (Colombia
- * time), choosing the date, the hour, the minutes and AM/PM like a user would.
- */
 export function fillDateTime(container: Element, value: string): void {
   const host = container.querySelector('app-date-time-input');
   const date = host?.querySelector('input');
@@ -144,7 +132,6 @@ export function imageFile(name = 'cover.jpg', type = 'image/jpeg', size = 1024):
   return new File([new Uint8Array(size)], name, { type });
 }
 
-/** Chooses `file` in a file input like a user would. */
 export function selectFile(input: HTMLInputElement, file: File): void {
   const transfer = new DataTransfer();
   transfer.items.add(file);

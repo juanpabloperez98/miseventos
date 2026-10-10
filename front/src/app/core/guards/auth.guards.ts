@@ -9,7 +9,6 @@ const LOGIN_URL = '/auth/login';
 const HOME_URL = '/events';
 const FORBIDDEN_URL = '/forbidden';
 
-/** Only authenticated users. Anonymous users go to the login page and come back afterwards. */
 export const authGuard: CanActivateFn = (_route, state) => {
   if (inject(AuthService).isAuthenticated()) {
     return true;
@@ -47,7 +46,6 @@ export const eventManagerGuard: CanActivateFn = (route, state) => {
 export const canManageEventsMatch: CanMatchFn = () =>
   inject(AuthorizationService).canCreateEvents();
 
-/** Login and registration pages are only for anonymous users. */
 export const guestGuard: CanActivateFn = () => {
   if (!inject(AuthService).isAuthenticated()) {
     return true;

@@ -57,7 +57,6 @@ MODEL_BY_ENTITY_TYPE: dict[SeedEntityType, type[Base]] = {
 
 @pytest.fixture(autouse=True)
 def seed_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Keep the tests independent from the values in the local .env file.
     monkeypatch.setattr("app.infrastructure.config.seed_settings.load_dotenv", lambda: False)
     for key, value in SEED_ENV.items():
         monkeypatch.setenv(key, value)

@@ -43,7 +43,6 @@ describe('EventDetailPage', () => {
     http.expectOne(`${TEST_API_URL}/events/${event.id}`).flush(event);
     http.expectOne(`${TEST_API_URL}/events/${event.id}/sessions`).flush(sessions);
     if (user) {
-      // Signed-in users: membership check for the registration panel.
       http.expectOne(`${TEST_API_URL}/me/registrations`).flush(myEvents);
     }
     await harness.fixture.whenStable();
@@ -80,7 +79,6 @@ describe('EventDetailPage', () => {
 
   it('should show the event and session schedules as dd/MM/yyyy and AM/PM in Colombia time', async () => {
     await open(
-      // 9:00 AM on May 10 to 11:30 PM on May 10 in Bogotá (the end is May 11 in UTC).
       buildEvent({
         start_date: '2030-05-10T14:00:00+00:00',
         end_date: '2030-05-11T04:30:00+00:00',
@@ -170,7 +168,6 @@ describe('EventDetailPage', () => {
     TestBed.tick();
     await harness.fixture.whenStable();
 
-    // While event 11 loads, nothing from event 10 is displayed.
     expect(page().querySelector('app-loading')).not.toBeNull();
     expect(textOf(page())).not.toContain('Angular Summit');
     expect(textOf(page())).not.toContain('Signals');
@@ -324,7 +321,6 @@ describe('EventDetailPage', () => {
       expect(panel().querySelector('a[href="/profile"]')).not.toBeNull();
       expect(registerButton()).toBeUndefined();
       expect(textOf(page().querySelector('app-alert'))).toBe('Te has inscrito en el evento.');
-      // No extra GET /me/registrations: verified by HttpTestingController in afterEach.
     });
 
     it('should show users already registered as such, without the button', async () => {
@@ -382,7 +378,6 @@ describe('EventDetailPage', () => {
         { status: 401, statusText: 'Unauthorized' },
       );
       await harness.fixture.whenStable();
-      // The page reloads the event and its sessions for the anonymous user.
       http.expectOne(`${TEST_API_URL}/events/10`).flush(buildEvent());
       http.expectOne(`${TEST_API_URL}/events/10/sessions`).flush([]);
       await harness.fixture.whenStable();
@@ -433,7 +428,6 @@ describe('EventDetailPage', () => {
       expect(speakers[0]?.classList).not.toContain('session__speaker--none');
       expect(textOf(speakers[1])).toBe('Ponente: Sin asignar');
       expect(speakers[1]?.classList).toContain('session__speaker--none');
-      // Never a bare id, and no extra request to resolve names.
       expect(textOf(sessionItems()[0])).not.toContain('Ponente: 3');
       http.expectNone((req) => req.url.startsWith(`${TEST_API_URL}/speakers`));
     });
@@ -483,7 +477,6 @@ describe('EventDetailPage', () => {
       request.flush(null, { status: 204, statusText: 'No Content' });
       await harness.fixture.whenStable();
 
-      // Removed locally, without reloading the list.
       expect(sessionItems().length).toBe(1);
       expect(textOf(sessionItems()[0])).toContain('Cierre');
       expect(textOf(page().querySelector('app-alert'))).toBe('Se eliminó la sesión «Apertura».');

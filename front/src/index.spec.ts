@@ -1,6 +1,5 @@
 import indexHtml from './index.html' with { loader: 'text' };
 
-/** Checks the static `index.html` shipped with the application. */
 describe('index.html', () => {
   const document = new DOMParser().parseFromString(indexHtml, 'text/html');
 

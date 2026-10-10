@@ -19,13 +19,11 @@ import { describeApiError, toApiError } from '../../../core/http/api-error';
 import { type EventImage } from '../models/event.model';
 import { EventsService } from './events.service';
 
-/** Same limits as the backend (`EventImagePolicy`); checked first to avoid useless requests. */
 export const EVENT_IMAGE_RULES = {
   maxBytes: 5 * 1024 * 1024,
   types: ['image/jpeg', 'image/png', 'image/webp'],
 } as const;
 
-/** `SignedImageUploadSchema`: public parameters of a signed Cloudinary upload (no secret). */
 export interface SignedImageUpload {
   upload_url: string;
   cloud_name: string;
@@ -36,7 +34,6 @@ export interface SignedImageUpload {
   allowed_formats: string;
 }
 
-/** Image chosen in the event form: a new file, the removal of the current one, or nothing. */
 export interface EventImageSelection {
   file: File | null;
   remove: boolean;
@@ -54,7 +51,6 @@ export type EventImageProgress =
 export type EventImageStage =
   'validation' | 'authorization' | 'upload' | 'confirmation' | 'removal';
 
-/** Failure of one stage, with a message ready to show. */
 export class EventImageError extends Error {
   constructor(
     readonly stage: EventImageStage,
@@ -65,7 +61,6 @@ export class EventImageError extends Error {
   }
 }
 
-/** Why the file cannot be uploaded, or `null` when it is acceptable. */
 export function validateEventImage(file: File): string | null {
   if (!(EVENT_IMAGE_RULES.types as readonly string[]).includes(file.type)) {
     return 'Selecciona una imagen JPG, PNG o WebP.';
@@ -79,7 +74,6 @@ export function validateEventImage(file: File): string | null {
   return null;
 }
 
-/** Text for the status line of the form. */
 export function describeImageProgress(progress: EventImageProgress): string {
   switch (progress.stage) {
     case 'authorizing':
@@ -113,7 +107,6 @@ export class EventImagesService {
   private readonly events = inject(EventsService);
   private readonly baseUrl = `${inject(API_URL)}/events`;
 
-  /** Applies the selection of the form; completes without emitting when nothing changes. */
   apply(eventId: number, selection: EventImageSelection): Observable<EventImageProgress> {
     if (selection.file) {
       return this.upload(eventId, selection.file);

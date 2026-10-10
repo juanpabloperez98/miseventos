@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Loading indicator announced politely to screen readers. */
 @Component({
   selector: 'app-loading',
   template: `

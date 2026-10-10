@@ -6,7 +6,6 @@ const STORAGE_KEY = 'mis-eventos.access-token';
 
 interface StoredToken {
   value: string;
-  /** Expiry as epoch milliseconds. */
   expiresAt: number;
 }
 
@@ -20,10 +19,8 @@ interface StoredToken {
  */
 @Injectable({ providedIn: 'root' })
 export class TokenStorage {
-  /** Fallback when `sessionStorage` is unavailable (the session then lasts until reload). */
   private memory: StoredToken | null = null;
 
-  /** Returns the stored token, or `null` when there is none or it has expired. */
   read(): StoredToken | null {
     const stored = this.load();
     if (!stored) {

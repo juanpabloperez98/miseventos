@@ -2,10 +2,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export type AlertType = 'success' | 'info' | 'error';
 
-/**
- * Inline message for confirmations and operation errors. Errors use `role="alert"` (assertive);
- * confirmations and information use `role="status"` (polite).
- */
 @Component({
   selector: 'app-alert',
   template: `<ng-content />`,

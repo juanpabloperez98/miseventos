@@ -48,7 +48,7 @@ class ConfirmEventImageUseCase:
 
         current = self._images.get_by_event(event_id)
         if current is not None and current.public_id == public_id:
-            return current  # Already confirmed (e.g. a retried request).
+            return current
         self._unit_of_work.rollback()
 
         stored = self._storage.get_image(public_id)
@@ -65,7 +65,7 @@ class ConfirmEventImageUseCase:
             previous = self._images.get_by_event(event_id)
             if previous is not None and previous.public_id == public_id:
                 self._unit_of_work.rollback()
-                return previous  # Confirmed concurrently by another request.
+                return previous
             saved = self._images.save(
                 EventImage(
                     event_id=event_id,

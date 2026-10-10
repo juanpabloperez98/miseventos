@@ -14,13 +14,11 @@ import { LOADING, type RequestState, toRequestState } from '../../../../shared/u
 import { EventCard, type EventModel } from '../../../events';
 import { RegistrationsService } from '../../../registrations';
 
-/** Shown when the session ends while the page is open (expired token or logout). */
 const SESSION_ENDED: RequestState<EventModel[]> = {
   status: 'error',
   error: { status: 401, serverMessage: null, fieldErrors: {} },
 };
 
-/** Profile of the authenticated user and the events they are registered to. */
 @Component({
   selector: 'app-profile-page',
   imports: [RouterLink, Button, EmptyState, ErrorState, EventCard, Loading],
@@ -40,7 +38,6 @@ export class ProfilePage {
 
   private readonly reloads = signal(0);
 
-  /** Reloaded on retry and whenever the signed-in user changes. */
   protected readonly state = toSignal(
     toObservable(computed(() => ({ user: this.user()?.id, reload: this.reloads() }))).pipe(
       switchMap(({ user }) =>

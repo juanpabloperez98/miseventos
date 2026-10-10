@@ -1,12 +1,8 @@
 #!/bin/sh
-# Container entrypoint: validate configuration, migrate, seed (development only) and start the
-# HTTP server. Any failing step stops the container with a non-zero exit code.
 set -eu
 
 FLASK_APP_FACTORY="app.bootstrap:create_app"
 
-# Fail fast, before touching the database, if the configuration is invalid (e.g. a weak
-# JWT_SECRET_KEY or seeders enabled in production). Messages never include secret values.
 python - <<'PY'
 import sys
 
@@ -22,7 +18,6 @@ PY
 alembic upgrade head
 
 if [ "${FLASK_ENV:-development}" = "production" ]; then
-  # Seeding is never run in production (the settings above already refuse SEED_*_ENABLED=true).
   echo "FLASK_ENV=production: skipping seed-initial-data"
   exec gunicorn \
     --bind 0.0.0.0:5000 \

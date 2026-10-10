@@ -1,37 +1,29 @@
-# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 build/
 dist/
 
-# Virtual environments
 .venv/
 venv/
 
-# Environment variables
 .env
 .env.*
 !.env.example
 
-# Testing and coverage
 .pytest_cache/
 .coverage
 .coverage.*
 coverage.xml
 htmlcov/
 
-# Tooling caches
 .mypy_cache/
 .ruff_cache/
 
-# Flask
 instance/
 
-# Docker
 docker-compose.override.yml
 
-# IDEs and OS
 .idea/
 .vscode/
 *.swp

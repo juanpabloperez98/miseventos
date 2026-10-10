@@ -6,7 +6,6 @@ from enum import StrEnum
 from dotenv import load_dotenv
 
 MIN_JWT_SECRET_LENGTH = 32
-# Production also rejects low-variety keys ("aaaa...", "1234...") and documented placeholders.
 MIN_PRODUCTION_JWT_SECRET_DISTINCT_CHARS = 16
 JWT_SECRET_PLACEHOLDER_MARKERS = ("replace-with", "change-me", "changeme")
 LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
@@ -42,7 +41,6 @@ class Settings:
     jwt_expiration_minutes: int = 60
     cors_origins: tuple[str, ...] = ()
     log_level: str = "INFO"
-    # Cloudinary (optional): without these three values image uploads answer 503.
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = field(default="", repr=False)

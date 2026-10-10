@@ -28,8 +28,6 @@ class UpdateSessionCommand:
 
 @dataclass(frozen=True, slots=True)
 class SessionView:
-    """Read model returned by the session use cases: the session plus its speaker's name."""
-
     id: int | None
     event_id: int
     speaker_id: int | None

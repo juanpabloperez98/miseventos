@@ -78,10 +78,6 @@ export class EventCreatePage {
       });
   }
 
-  /**
-   * The image needs the event id, so it is uploaded after creating the event. If it fails the
-   * event is kept and the user is told to add the image from the edit page.
-   */
   private uploadImage(eventId: number): void {
     const done = (type: 'success' | 'error', message: string) => {
       this.flashMessages.set(type, message);

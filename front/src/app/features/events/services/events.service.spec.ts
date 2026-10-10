@@ -84,7 +84,6 @@ describe('EventsService', () => {
     const { id, name, description, location, start_date, end_date, capacity } = buildEvent();
     const payload = { name, description, location, start_date, end_date, capacity };
 
-    /** Loads the catalog once, so the next identical request can come from the cache. */
     function loadCatalog(): void {
       service.list(query).subscribe();
       const [request] = listRequests();

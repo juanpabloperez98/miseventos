@@ -25,15 +25,12 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(
       routes,
-      // Route params, query params and resolved data are bound to component inputs.
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
     ),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     { provide: LOCALE_ID, useValue: APP_LOCALE },
-    // Restore the session of this tab before the first navigation, so guards see the real state.
     provideAppInitializer(() => inject(AuthService).restoreSession()),
-    // Sends the user to the login page if the session ends while on a protected page.
     provideSessionExpiryRedirect(),
   ],
 };

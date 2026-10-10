@@ -8,7 +8,6 @@ from app.domain.ports import StoredImage
 DEFAULT_MAX_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_FILENAME_LENGTH = 255
 
-# MIME type accepted from the client → format reported by the image service.
 ALLOWED_IMAGE_TYPES: dict[str, str] = {
     "image/jpeg": "jpg",
     "image/png": "png",

@@ -2,7 +2,6 @@ import { type Route, type Routes, type UrlMatchResult, type UrlSegment } from '@
 
 import { authGuard, canManageEventsMatch, eventManagerGuard } from '../../core/guards/auth.guards';
 
-/** Event ids are positive integers (backend `int` route converter). */
 const EVENT_ID = /^[1-9]\d*$/;
 
 /**
@@ -25,10 +24,6 @@ function eventIdMatcher(suffix?: string) {
   };
 }
 
-/**
- * Session pages of an event: `<id>/sessions/new` and `<id>/sessions/<sessionId>/edit`, with numeric
- * ids exposed as the `id` and `sessionId` params.
- */
 function sessionMatcher(kind: 'new' | 'edit') {
   return (segments: UrlSegment[]): UrlMatchResult | null => {
     const [id, sessions, third, fourth] = segments;
@@ -74,10 +69,6 @@ function managerPage(page: Route): Route[] {
   ];
 }
 
-/**
- * Static paths are declared before the id-based ones. The official creation path is `/events/new`;
- * `/events/create` is an alias so a typed or shared URL reaches the same guarded page.
- */
 export const EVENTS_ROUTES: Routes = [
   {
     path: '',

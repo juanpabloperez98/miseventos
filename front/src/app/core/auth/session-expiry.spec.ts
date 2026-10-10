@@ -37,7 +37,6 @@ describe('SessionExpiryRedirect', () => {
 
   afterEach(() => cleanUpAuth());
 
-  /** Two requests in flight when the token is rejected (e.g. event + sessions). */
   function rejectTwoConcurrentRequests(): void {
     const client = TestBed.inject(HttpClient);
     client.post(`${TEST_API_URL}/events`, {}).subscribe({ error: () => undefined });

@@ -1,13 +1,7 @@
-// Global tokens, moderate reset and base element styles.
-// Loaded once from src/styles.scss. Do not import this file from components.
-
 @use 'sass:map';
 @use 'variables' as vars;
 @use 'mixins' as mx;
 
-// ---------------------------------------------------------------------------
-// Design tokens as CSS custom properties
-// ---------------------------------------------------------------------------
 :root {
   @each $name, $value in vars.$colors {
     --color-#{$name}: #{$value};
@@ -41,9 +35,6 @@
   color-scheme: light;
 }
 
-// ---------------------------------------------------------------------------
-// Moderate reset
-// ---------------------------------------------------------------------------
 *,
 *::before,
 *::after {
@@ -97,9 +88,6 @@ h6 {
   overflow-wrap: break-word;
 }
 
-// ---------------------------------------------------------------------------
-// Typographic hierarchy
-// ---------------------------------------------------------------------------
 h1,
 h2,
 h3,
@@ -145,11 +133,6 @@ a {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Accessibility
-// ---------------------------------------------------------------------------
-
-// Visible focus for keyboard users only.
 :focus-visible {
   @include mx.focus-ring;
 }

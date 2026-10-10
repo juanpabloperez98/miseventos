@@ -12,14 +12,9 @@ import { Button } from '../../../../shared/components/button/button';
 import { FormField } from '../../../../shared/components/form-field/form-field';
 import { compareWithSibling, notBlank } from '../../../../shared/utils/validators';
 
-/** Limits of `RegisterRequestSchema`. */
 const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 128;
 
-/**
- * Public registration. The backend always creates an `ATTENDEE` account, so no role can be chosen.
- * After registering, the user is signed in with the same credentials.
- */
 @Component({
   selector: 'app-register-page',
   imports: [ReactiveFormsModule, RouterLink, Alert, Button, FormField],
@@ -90,7 +85,6 @@ export class RegisterPage {
   private handleError(error: unknown, registered: boolean): void {
     this.submitting.set(false);
     if (registered) {
-      // The account was created but the automatic sign-in failed.
       this.flashMessages.set(
         'info',
         'Tu cuenta se creó correctamente. Inicia sesión para continuar.',

@@ -6,7 +6,6 @@ from app.domain.ports import SpeakerRepository
 
 
 def to_session_views(sessions: Sequence[Session], speakers: SpeakerRepository) -> list[SessionView]:
-    """Adds each speaker's name, loading every distinct speaker once."""
     speaker_ids = {session.speaker_id for session in sessions if session.speaker_id is not None}
     names: dict[int, str] = {}
     for speaker_id in speaker_ids:

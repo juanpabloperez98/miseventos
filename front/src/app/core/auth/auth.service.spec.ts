@@ -108,7 +108,6 @@ describe('AuthService', () => {
           { message: 'Invalid or expired token' },
           { status: 401, statusText: 'Unauthorized' },
         );
-      // The interceptor retries the GET anonymously; the endpoint still requires a token.
       http
         .expectOne((req) => !req.headers.has('Authorization'))
         .flush({ message: 'Missing bearer token' }, { status: 401, statusText: 'Unauthorized' });

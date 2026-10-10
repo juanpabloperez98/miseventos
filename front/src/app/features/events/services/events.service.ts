@@ -14,10 +14,8 @@ import {
 } from '../models/event.model';
 import { type EventSession } from '../models/session.model';
 
-/** How long a catalog page is reused before it is requested again. */
 export const EVENT_LIST_CACHE_TTL_MS = 60_000;
 
-/** Access to the `/events` endpoints. Components never build API URLs themselves. */
 @Injectable({ providedIn: 'root' })
 export class EventsService {
   private readonly http = inject(HttpClient);
@@ -45,7 +43,6 @@ export class EventsService {
     );
   }
 
-  /** Forgets the cached catalog pages, e.g. after a change of an event cover image. */
   clearListCache(): void {
     this.listCache.clear();
   }
@@ -54,29 +51,22 @@ export class EventsService {
     return this.http.get<EventModel>(`${this.baseUrl}/${id}`);
   }
 
-  /** Sessions of the event, ordered by start time. Requested separately from the event. */
   getSessions(eventId: number): Observable<EventSession[]> {
     return this.http.get<EventSession[]>(`${this.baseUrl}/${eventId}/sessions`);
   }
 
-  /** Creates a `DRAFT` event owned by the current user. */
   create(payload: EventPayload): Observable<EventModel> {
     return this.http
       .post<EventModel>(this.baseUrl, payload)
       .pipe(tap(() => this.listCache.clear()));
   }
 
-  /** Replaces the editable fields (the backend has no `PATCH`). */
   update(id: number, payload: EventUpdatePayload): Observable<EventModel> {
     return this.http
       .put<EventModel>(`${this.baseUrl}/${id}`, payload)
       .pipe(tap(() => this.listCache.clear()));
   }
 
-  /**
-   * Drafts are deleted (`204`, emits `null`); published events are cancelled instead (`200`, emits
-   * the cancelled event).
-   */
   remove(id: number): Observable<EventModel | null> {
     return this.http.delete<EventModel>(`${this.baseUrl}/${id}`, { observe: 'response' }).pipe(
       map((response) => (response.status === 204 ? null : response.body)),

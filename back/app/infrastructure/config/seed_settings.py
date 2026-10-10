@@ -10,7 +10,6 @@ from app.domain.exceptions import InvalidValueError
 from app.domain.value_objects import Email
 from app.infrastructure.config.settings import ConfigurationError, parse_bool, require_env
 
-# Same limits the public registration endpoint applies to passwords.
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
 

@@ -68,7 +68,6 @@ describe('EventListPage', () => {
     expect(cards.length).toBe(2);
     expect(textOf(cards[0])).toContain('Angular Summit');
     expect(textOf(cards[0])).toContain('Medellín');
-    // 14:00-22:00 UTC is 9:00 AM-5:00 PM in Colombia.
     expect(textOf(cards[0].querySelector('.card__meta'))).toContain(
       '10/05/2030 · 9:00 AM – 5:00 PM',
     );
@@ -172,7 +171,6 @@ describe('EventListPage', () => {
       TestBed.inject(AuthService).logout();
       await settle();
 
-      // The previous user's draft disappears immediately: the page shows the loading state.
       expect(textOf(page())).not.toContain('Borrador privado');
       expect(page().querySelector('app-loading')).not.toBeNull();
       const second = listRequest();

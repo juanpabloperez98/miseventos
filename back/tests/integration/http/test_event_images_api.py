@@ -1,5 +1,3 @@
-"""Event cover images through the API and PostgreSQL, with a fake image service (no network)."""
-
 from typing import Any
 
 import pytest
@@ -55,7 +53,6 @@ def _confirm(client: FlaskClient, user: ApiUser, event_id: int, public_id: str) 
 
 
 def _upload(client: FlaskClient, user: ApiUser, event_id: int, storage: FakeImageStorage) -> str:
-    """Authorization, then the direct upload the browser would make."""
     response = _authorize(client, user, event_id)
     assert response.status_code == 200, response.get_json()
     public_id: str = response.get_json()["public_id"]
@@ -294,6 +291,19 @@ def test_an_image_service_failure_answers_502_without_details(
 
     assert response.status_code == 502
     assert response.get_json() == {"message": "The image service could not complete the operation"}
+
+
+@pytest.mark.usefixtures("storage")
+def test_image_endpoints_are_wired_to_their_use_cases(
+    db_client: FlaskClient, organizer: ApiUser, event_id: int
+) -> None:
+    upload = _authorize(db_client, organizer, event_id)
+    confirm = _confirm(db_client, organizer, event_id, f"mis-eventos/events/{event_id}/{'0' * 32}")
+    delete = db_client.delete(f"/api/events/{event_id}/images", headers=organizer.headers)
+
+    assert upload.status_code == 200, upload.get_json()
+    assert confirm.status_code == 422, confirm.get_json()
+    assert delete.status_code == 404, delete.get_json()
 
 
 def test_answers_503_when_cloudinary_is_not_configured(

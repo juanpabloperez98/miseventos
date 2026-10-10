@@ -32,11 +32,6 @@ import { type EventModel } from '../../models/event.model';
 import { type EventSession, SESSION_LIMITS, type SessionPayload } from '../../models/session.model';
 import { type Speaker } from '../../models/speaker.model';
 
-/**
- * Create/edit form for sessions. Presentational: validates and emits the payload; the page performs
- * the request. Mirrors `SessionWriteSchema` and the domain rules: start before end, inside the event
- * schedule, a capacity between 1 and the event capacity, and an optional existing speaker.
- */
 @Component({
   selector: 'app-session-form',
   imports: [ReactiveFormsModule, Button, DateRangePipe, FormField],
@@ -45,9 +40,7 @@ import { type Speaker } from '../../models/speaker.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionForm {
-  /** Event the session belongs to (its schedule bounds the session). */
   readonly event = input.required<EventModel>();
-  /** Session being edited. When absent the form creates a new session. */
   readonly session = input<EventSession | null>(null);
   readonly speakers = input<readonly Speaker[]>([]);
   readonly submitting = input(false);
@@ -61,13 +54,11 @@ export class SessionForm {
   private readonly fb = inject(NonNullableFormBuilder);
   protected readonly limits = SESSION_LIMITS;
 
-  /** Event schedule in Colombia time (`yyyy-MM-ddTHH:mm`), used for validation and the input bounds. */
   protected readonly bounds = computed(() => ({
     min: toColombiaInput(this.event().start_date),
     max: toColombiaInput(this.event().end_date),
   }));
 
-  /** A session cannot hold more people than its event (same rule as the backend). */
   protected readonly maxCapacity = computed(() =>
     Math.min(this.event().capacity, SESSION_LIMITS.capacityMax),
   );
@@ -133,11 +124,6 @@ export class SessionForm {
   /** Emits on every change of the capacity control, so the computed below stays up to date. */
   private readonly capacityEvents = toSignal(this.form.controls.capacity.events);
 
-  /**
-   * A capacity was entered but is out of range (below 1, above the event capacity, not an integer):
-   * the submit button is disabled until it is fixed. An empty field keeps the usual behavior
-   * (submitting shows the required-field errors).
-   */
   protected readonly capacityOutOfRange = computed(() => {
     this.capacityEvents();
     const control = this.form.controls.capacity;
@@ -164,7 +150,6 @@ export class SessionForm {
           : undefined,
       );
       if (session && this.form.controls.capacity.invalid) {
-        // Existing session above the event capacity: show why it cannot be saved as it is.
         this.form.controls.capacity.markAsTouched();
       }
     });

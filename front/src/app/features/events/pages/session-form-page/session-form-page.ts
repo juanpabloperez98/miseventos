@@ -36,11 +36,6 @@ interface SessionFormData {
   speakers: Speaker[];
 }
 
-/**
- * Creates (`/events/:id/sessions/new`) or edits (`/events/:id/sessions/:sessionId/edit`) a session.
- * The route only matches for event managers; ownership and event status are checked here once the
- * event is loaded, and the backend checks them again on save.
- */
 @Component({
   selector: 'app-session-form-page',
   imports: [RouterLink, Alert, Button, EmptyState, ErrorState, Loading, SessionForm],
@@ -49,9 +44,7 @@ interface SessionFormData {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionFormPage {
-  /** Event id (`:id`). */
   readonly id = input.required({ transform: numberAttribute });
-  /** Session id (`:sessionId`), only when editing. */
   readonly sessionId = input<number | undefined, unknown>(undefined, {
     transform: (value: unknown) => (value === undefined ? undefined : numberAttribute(value)),
   });
@@ -68,7 +61,6 @@ export class SessionFormPage {
 
   protected readonly isEdit = computed(() => this.sessionId() !== undefined);
 
-  /** Event, session (edit only) and speakers, requested in parallel. */
   protected readonly state = toSignal(
     toObservable(
       computed(() => ({ id: this.id(), sessionId: this.sessionId(), r: this.reloads() })),
@@ -80,7 +72,6 @@ export class SessionFormPage {
   protected readonly error = signal<string | null>(null);
   protected readonly fieldErrors = signal<FieldErrors>({});
 
-  /** Why the current user cannot manage this event's sessions, if that is the case. */
   protected readonly blockedReason = computed(() => {
     const state = this.state();
     if (state.status !== 'success') {
@@ -139,7 +130,6 @@ export class SessionFormPage {
         : this.sessions.get(sessionId).pipe(
             map((session) => {
               if (session.event_id !== eventId) {
-                // The URL mixes a session with another event: same answer as the API (404).
                 throw new HttpErrorResponse({
                   status: 404,
                   error: { message: 'Session not found' },

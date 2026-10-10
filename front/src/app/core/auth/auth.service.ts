@@ -23,14 +23,9 @@ import {
 } from './auth.models';
 import { TokenStorage } from './token-storage';
 
-/** Longest delay accepted by `setTimeout` (~24.8 days). */
 const MAX_TIMER_DELAY = 2_147_483_647;
 const RESTORE_TIMEOUT_MS = 8_000;
 
-/**
- * Why a session ended: the user signed out, the token reached its expiry time, or the API rejected
- * it (401).
- */
 export type SessionEndReason = 'logout' | 'expired' | 'rejected';
 
 /**
@@ -52,28 +47,20 @@ export class AuthService {
 
   readonly user = this.currentUser.asReadonly();
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
-  /** Emits once each time an active session ends (never for an already anonymous user). */
   readonly sessionEnded$ = this.sessionEndedSubject.asObservable();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.expiryTimer));
   }
 
-  /** Bearer token to attach to API requests, or `null` if there is no valid session. */
   accessToken(): string | null {
     const stored = this.storage.read();
     if (!stored && this.currentUser()) {
-      // The token expired while the app was open.
       this.endSession('expired');
     }
     return stored?.value ?? null;
   }
 
-  /**
-   * Restores the session stored in this tab, if any. Used once at application start-up.
-   * A rejected token (401) ends the session; other failures (backend unreachable) keep the token so
-   * a later reload can restore it.
-   */
   restoreSession(): Observable<void> {
     const stored = this.storage.read();
     if (!stored) {
@@ -109,7 +96,6 @@ export class AuthService {
     );
   }
 
-  /** Creates an `ATTENDEE` account. It does not start a session. */
   register(data: RegisterRequest): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/auth/register`, data);
   }
@@ -118,7 +104,6 @@ export class AuthService {
     this.endSession('logout');
   }
 
-  /** Called when the API rejects the token (401): the session is no longer valid. */
   handleRejectedToken(): void {
     this.endSession('rejected');
   }

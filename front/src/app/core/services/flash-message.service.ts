@@ -7,10 +7,6 @@ export interface FlashMessage {
   text: string;
 }
 
-/**
- * One-shot message handed from one page to the next one (e.g. "Evento creado" after saving and
- * navigating to the detail). The destination page consumes it, so it is shown only once.
- */
 @Injectable({ providedIn: 'root' })
 export class FlashMessageService {
   private pending: FlashMessage | null = null;

@@ -8,6 +8,5 @@ import type { Environment } from './environment.model';
  */
 export const environment: Environment = {
   production: true,
-  /** Relative so the app and the API can share an origin behind a reverse proxy. */
   apiUrl: '/api',
 };

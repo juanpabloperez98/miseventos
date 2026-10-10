@@ -89,7 +89,6 @@ describe('EventForm', () => {
         name: 'Angular Day',
         description: null,
         location: 'Bogotá',
-        // 10:00 AM and 6:00 PM in Bogotá (UTC-5).
         start_date: '2030-05-10T15:00:00.000Z',
         end_date: '2030-05-10T23:00:00.000Z',
         capacity: 150,
@@ -101,7 +100,6 @@ describe('EventForm', () => {
     fixture.componentRef.setInput('event', buildEvent({ status: 'DRAFT' }));
     await fixture.whenStable();
 
-    // The status is the last select (the schedule fields have their own hour selects).
     const status = () => [...element.querySelectorAll('select')].at(-1)!;
     const options = [...status().options].map((option) => textOf(option));
     expect(options).toEqual(['Borrador', 'Publicado', 'Cancelado']);
@@ -118,7 +116,6 @@ describe('EventForm', () => {
   });
 
   it('should load the schedule of an event in Colombia time, with AM/PM', async () => {
-    // 9:00 AM on May 10 and 11:30 PM on May 10 in Bogotá (the end is already May 11 in UTC).
     fixture.componentRef.setInput(
       'event',
       buildEvent({

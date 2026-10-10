@@ -9,7 +9,6 @@ describe('RequestCache', () => {
   let cache: RequestCache<string>;
   let calls: Subject<string>[];
 
-  /** Each call starts a new "request", answered through `calls[index]`. */
   const load = (): Observable<string> =>
     defer(() => {
       const response = new Subject<string>();

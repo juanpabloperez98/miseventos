@@ -15,11 +15,9 @@ class _Schema(Schema):
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
-        # 2:30 PM in Colombia.
         ("2030-10-10T14:30:00-05:00", datetime(2030, 10, 10, 19, 30, tzinfo=UTC)),
         ("2030-10-10T19:30:00Z", datetime(2030, 10, 10, 19, 30, tzinfo=UTC)),
         ("2030-10-10T19:30:00+00:00", datetime(2030, 10, 10, 19, 30, tzinfo=UTC)),
-        # 11:30 PM in Colombia is already the next day in UTC.
         ("2030-10-10T23:30:00-05:00", datetime(2030, 10, 11, 4, 30, tzinfo=UTC)),
     ],
 )

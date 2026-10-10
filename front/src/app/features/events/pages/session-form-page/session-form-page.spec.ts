@@ -21,7 +21,6 @@ import { type EventModel } from '../../models/event.model';
 
 const EVENT = buildEvent({
   id: 10,
-  // 10:00 AM to 6:00 PM in Colombia time.
   start_date: '2030-05-10T15:00:00.000Z',
   end_date: '2030-05-10T23:00:00.000Z',
 });
@@ -71,7 +70,6 @@ describe('SessionFormPage', () => {
     await harness.fixture.whenStable();
   }
 
-  /** Answers the requests of the event detail page shown after saving. */
   async function flushEventDetail(): Promise<void> {
     await harness.fixture.whenStable();
     TestBed.tick();
@@ -119,7 +117,6 @@ describe('SessionFormPage', () => {
     await harness.fixture.whenStable();
 
     expect(textOf(page().querySelector('h1'))).toBe('Editar sesión');
-    // The speaker is the last select (the schedule fields have their own hour selects).
     expect([...page().querySelectorAll('select')].at(-1)?.value).toBe('1');
 
     await fillValidForm();

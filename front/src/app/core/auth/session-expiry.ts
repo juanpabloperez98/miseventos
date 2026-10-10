@@ -12,7 +12,6 @@ import { authGuard, eventManagerGuard } from '../guards/auth.guards';
 import { FlashMessageService } from '../services/flash-message.service';
 import { AuthService } from './auth.service';
 
-/** Guards that require a signed-in user. */
 // `unknown`: route configs may also hold legacy (class/token) guards, which never match.
 const PROTECTING_GUARDS: readonly unknown[] = [authGuard, eventManagerGuard];
 
@@ -54,7 +53,6 @@ function isProtected(root: ActivatedRouteSnapshot): boolean {
   return false;
 }
 
-/** Starts {@link SessionExpiryRedirect} with the application. */
 export function provideSessionExpiryRedirect(): EnvironmentProviders {
   return provideEnvironmentInitializer(() => inject(SessionExpiryRedirect));
 }

@@ -41,7 +41,6 @@ class EventModel(TimestampMixin, Base):
     sessions: Mapped[list["SessionModel"]] = relationship(
         back_populates="event", cascade="all, delete-orphan", passive_deletes=True
     )
-    # Loaded with the event (one extra query per page of events, never one per event).
     image: Mapped["EventImageModel | None"] = relationship(
         back_populates="event", lazy="selectin", cascade="all", passive_deletes=True
     )

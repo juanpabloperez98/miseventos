@@ -5,11 +5,6 @@ import { map, type Observable } from 'rxjs';
 import { API_URL } from '../../../core/config/api-url.token';
 import { type EventSession, type SessionPayload } from '../models/session.model';
 
-/**
- * Session management (ADMIN or the organizer who owns the event). The backend validates the
- * schedule (start < end, inside the event), the capacity and the speaker. Listing the sessions of
- * an event lives in `EventsService.getSessions`.
- */
 @Injectable({ providedIn: 'root' })
 export class SessionsService {
   private readonly http = inject(HttpClient);
@@ -23,12 +18,10 @@ export class SessionsService {
     return this.http.post<EventSession>(`${this.apiUrl}/events/${eventId}/sessions`, payload);
   }
 
-  /** Replaces every editable field (`PUT`); `speaker_id: null` removes the speaker. */
   update(sessionId: number, payload: SessionPayload): Observable<EventSession> {
     return this.http.put<EventSession>(`${this.apiUrl}/sessions/${sessionId}`, payload);
   }
 
-  /** `DELETE /sessions/{id}` answers 204. */
   remove(sessionId: number): Observable<void> {
     return this.http.delete(`${this.apiUrl}/sessions/${sessionId}`).pipe(map(() => undefined));
   }

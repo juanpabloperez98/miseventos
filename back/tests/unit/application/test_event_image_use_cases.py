@@ -121,7 +121,6 @@ def _uploaded(
     event: Event,
     **upload: object,
 ) -> str:
-    """Authorizes an upload and simulates the browser sending the file to the image service."""
     public_id = authorize.execute(OWNER, _request(event)).public_id
     storage.upload(public_id, **upload)  # type: ignore[arg-type]
     return public_id
@@ -339,7 +338,7 @@ class TestConfirmImage:
         images: InMemoryEventImageRepository,
         event: Event,
     ) -> None:
-        public_id = authorize.execute(OWNER, _request(event)).public_id  # Never uploaded.
+        public_id = authorize.execute(OWNER, _request(event)).public_id
 
         with pytest.raises(InvalidValueError, match="could not be verified"):
             confirm.execute(OWNER, ConfirmImageCommand(event.id or 0, public_id))
@@ -373,7 +372,7 @@ class TestConfirmImage:
 
         with pytest.raises(InvalidValueError, match="not uploaded for this event"):
             confirm.execute(OWNER, ConfirmImageCommand(event.id or 0, public_id))
-        assert public_id in storage.images  # Still usable by its own event.
+        assert public_id in storage.images
 
     @pytest.mark.parametrize(
         "public_id",

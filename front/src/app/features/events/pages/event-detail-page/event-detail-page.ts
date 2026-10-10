@@ -41,17 +41,10 @@ import { type EventSession } from '../../models/session.model';
 import { EventsService } from '../../services/events.service';
 import { SessionsService } from '../../services/sessions.service';
 
-/** Whether the signed-in user is registered to the event, from `GET /me/registrations`. */
 type Membership = 'anonymous' | 'checking' | 'registered' | 'not-registered';
 
-/** Backend message for a duplicate registration (409). */
 const ALREADY_REGISTERED = 'User is already registered to this event';
 
-/**
- * Event detail. The event and its sessions come from two endpoints, requested in parallel and
- * rendered independently: a failure loading sessions does not hide the event. Signed-in users can
- * register to published events (`POST /events/{id}/registrations`).
- */
 @Component({
   selector: 'app-event-detail-page',
   imports: [
@@ -73,7 +66,6 @@ const ALREADY_REGISTERED = 'User is already registered to this event';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventDetailPage {
-  /** `:id` route param. */
   readonly id = input.required({ transform: numberAttribute });
 
   private readonly router = inject(Router);
@@ -87,18 +79,11 @@ export class EventDetailPage {
 
   private readonly eventReloads = signal(0);
   private readonly sessionReloads = signal(0);
-  /** Visibility depends on the user, so the data is reloaded when the session changes. */
   private readonly userId = computed(() => this.auth.user()?.id ?? null);
 
-  /**
-   * Event being shown and user viewing it. The transient UI state below (notice, removal
-   * confirmation) belongs to that pair and is reset when either changes, so it never carries over
-   * to another event or account.
-   */
   private readonly viewKey = computed(() => ({ id: this.id(), user: this.userId() }));
   private readonly initialNotice = this.flashMessages.consume();
 
-  /** The flash message from the previous page is only shown for the first event displayed. */
   protected readonly notice = linkedSignal<unknown, FlashMessage | null>({
     source: this.viewKey,
     computation: (_key, previous) => (previous === undefined ? this.initialNotice : null),
@@ -118,13 +103,8 @@ export class EventDetailPage {
     source: this.viewKey,
     computation: () => null,
   });
-  /** Set after a successful (or duplicate) registration, without reloading the user's list. */
   private readonly registeredNow = linkedSignal({ source: this.viewKey, computation: () => false });
 
-  /**
-   * One `GET /me/registrations` per event and user (none for anonymous users). If it fails the
-   * button stays available: the backend rejects duplicates with 409 anyway.
-   */
   private readonly membership = toSignal(
     toObservable(this.viewKey).pipe(
       switchMap(({ id, user }) =>
@@ -141,7 +121,6 @@ export class EventDetailPage {
     { initialValue: LOADING },
   );
 
-  /** Writable copy, so a cancellation can update the view with the event returned by the API. */
   protected readonly eventState = linkedSignal<RequestState<EventModel>>(() => this.loadedEvent());
 
   private readonly loadedSessions = toSignal(
@@ -151,7 +130,6 @@ export class EventDetailPage {
     { initialValue: LOADING },
   );
 
-  /** Writable copy, so a deleted session disappears without reloading the list. */
   protected readonly sessionsState = linkedSignal<RequestState<EventSession[]>>(() =>
     this.loadedSessions(),
   );
@@ -172,11 +150,6 @@ export class EventDetailPage {
     return !!event && this.authorization.canManageEvent(event.created_by) && isEventEditable(event);
   });
 
-  /**
-   * Why an event manager (ADMIN / ORGANIZER) cannot manage this event's sessions, so the missing
-   * actions are explained instead of silently hidden. Attendees and anonymous users get no note:
-   * they can only read sessions.
-   */
   protected readonly sessionManagementNote = computed(() => {
     const event = this.event();
     if (!event || !this.authorization.canCreateEvents() || this.canEdit()) {

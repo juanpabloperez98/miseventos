@@ -5,7 +5,6 @@ import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { API_URL } from '../config/api-url.token';
 
-/** Endpoints that must never receive a bearer token. */
 const CREDENTIAL_ENDPOINTS = ['/auth/login', '/auth/register'];
 
 /**

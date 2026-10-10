@@ -6,7 +6,6 @@ import { startWith, switchMap } from 'rxjs';
 import { validationMessage } from '../../utils/validation-messages';
 import { DateTimeInput } from '../date-time-input/date-time-input';
 
-/** `datetime`: date and 12-hour time in Colombia time (`yyyy-MM-ddTHH:mm` value). */
 export type FormFieldType =
   'text' | 'email' | 'password' | 'number' | 'datetime' | 'textarea' | 'select';
 
@@ -17,11 +16,6 @@ export interface FormFieldOption {
 
 let nextId = 0;
 
-/**
- * Labelled form control bound to a Reactive Forms `FormControl`, with hint and validation message.
- * The error is shown once the control is touched or dirty, and is linked through
- * `aria-describedby` / `aria-invalid` for assistive technologies.
- */
 @Component({
   selector: 'app-form-field',
   imports: [ReactiveFormsModule, DateTimeInput],
@@ -43,7 +37,6 @@ export class FormField {
   readonly max = input<string | number>();
   readonly maxLength = input<number>();
   readonly options = input<readonly FormFieldOption[]>([]);
-  /** Custom messages per validation error key. */
   readonly messages = input<Record<string, string>>({});
 
   /** Emits on every value/status/touched change, so OnPush views react to `markAllAsTouched()`. */

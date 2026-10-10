@@ -32,10 +32,6 @@ import {
 } from '../../services/event-images.service';
 import { EventsService } from '../../services/events.service';
 
-/**
- * Edits an event with `PUT /events/{id}`. The route guard only lets event managers in; ownership and
- * status are checked here once the event is loaded, and the backend checks them again on save.
- */
 @Component({
   selector: 'app-event-edit-page',
   imports: [RouterLink, Alert, Button, EmptyState, ErrorState, EventForm, Loading],
@@ -68,7 +64,6 @@ export class EventEditPage {
   protected readonly error = signal<string | null>(null);
   protected readonly fieldErrors = signal<FieldErrors>({});
 
-  /** Why the loaded event cannot be edited by the current user, if that is the case. */
   protected readonly blockedReason = computed(() => {
     const state = this.state();
     if (state.status !== 'success') {
@@ -110,10 +105,6 @@ export class EventEditPage {
       });
   }
 
-  /**
-   * Applies the image change once the event is saved. The backend keeps the previous image until
-   * the new one is confirmed. If it fails the user stays here to try again.
-   */
   private applyImage(id: number): void {
     const finish = () => {
       this.flashMessages.set('success', 'Los cambios se guardaron correctamente.');

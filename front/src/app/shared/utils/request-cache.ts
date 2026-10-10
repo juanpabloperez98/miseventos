@@ -2,7 +2,6 @@ import { type Observable, shareReplay, tap } from 'rxjs';
 
 interface Entry<T> {
   response: Observable<T>;
-  /** `Infinity` while the request is in flight: identical requests share it. */
   expiresAt: number;
 }
 
@@ -48,7 +47,6 @@ export class RequestCache<T> {
     return entry.response;
   }
 
-  /** Forgets every response, e.g. after a change that affects them. */
   clear(): void {
     this.entries.clear();
   }

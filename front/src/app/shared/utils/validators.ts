@@ -1,6 +1,5 @@
 import { type AbstractControl, type ValidationErrors, type ValidatorFn } from '@angular/forms';
 
-/** Rejects values made only of whitespace (the backend rejects blank names and locations). */
 export const notBlank: ValidatorFn = (
   control: AbstractControl<unknown>,
 ): ValidationErrors | null =>
@@ -8,7 +7,6 @@ export const notBlank: ValidatorFn = (
     ? { notBlank: true }
     : null;
 
-/** Accepts only whole numbers. Empty values are left to `Validators.required`. */
 export const integer: ValidatorFn = (
   control: AbstractControl<unknown>,
 ): ValidationErrors | null => {

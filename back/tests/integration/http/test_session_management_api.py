@@ -549,8 +549,6 @@ class TestDeleteSession:
 
 
 class TestSessionCapacity:
-    """A session cannot hold more people than its event, whatever client calls the API."""
-
     MESSAGE = {"message": "Session capacity cannot exceed the event capacity"}
 
     @pytest.fixture
@@ -610,8 +608,6 @@ class TestSessionCapacity:
 
 
 class TestSpeakerNameInResponses:
-    """Session responses include the speaker's name, so clients never show bare ids."""
-
     def test_list_and_detail_include_the_speaker_name(
         self, db_client: FlaskClient, organizer: ApiUser, event_id: int, speaker_id: int
     ) -> None:

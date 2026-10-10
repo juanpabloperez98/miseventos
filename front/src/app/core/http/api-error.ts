@@ -1,23 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-/** Field-level validation messages, keyed by request field name (e.g. `{ email: ['...'] }`). */
 export type FieldErrors = Record<string, string[]>;
 
-/**
- * Normalized API error.
- *
- * The backend always answers errors as `{ message, errors? }`, where `errors` groups marshmallow
- * validation messages by request location: `{ json: { field: [messages] } }`.
- */
 export interface ApiError {
-  /** HTTP status. `0` means the server could not be reached. */
   status: number;
-  /** Raw message sent by the backend, if any. */
   serverMessage: string | null;
   fieldErrors: FieldErrors;
 }
 
-/** Converts anything thrown by `HttpClient` into an {@link ApiError}. */
 export function toApiError(error: unknown): ApiError {
   if (!(error instanceof HttpErrorResponse)) {
     return { status: 0, serverMessage: null, fieldErrors: {} };
@@ -30,7 +20,6 @@ export function toApiError(error: unknown): ApiError {
   };
 }
 
-/** Known backend messages translated for the user interface. */
 const KNOWN_MESSAGES: Record<string, string> = {
   'Invalid email or password': 'El correo o la contraseña no son correctos.',
   'Email is already registered': 'Este correo ya está registrado.',
@@ -64,7 +53,6 @@ const KNOWN_MESSAGES: Record<string, string> = {
     'El archivo no es una imagen JPG, PNG o WebP.',
 };
 
-/** Returns a user-facing message (in Spanish) describing the error. */
 export function describeApiError(error: ApiError): string {
   if (error.serverMessage && KNOWN_MESSAGES[error.serverMessage]) {
     return KNOWN_MESSAGES[error.serverMessage];
@@ -103,7 +91,6 @@ function collectFieldErrors(errors: unknown): FieldErrors {
   if (!isRecord(errors)) {
     return result;
   }
-  // Merge every location (json, query...) into a single field map.
   for (const location of Object.values(errors)) {
     if (!isRecord(location)) {
       continue;

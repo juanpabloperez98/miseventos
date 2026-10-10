@@ -23,7 +23,6 @@
     transform: translateY(-2px);
   }
 
-  // Date and status band, right below the cover.
   &__band {
     display: flex;
     align-items: flex-start;
@@ -72,7 +71,6 @@
     color: var(--color-text);
     text-decoration: none;
 
-    // Stretched link: the whole card is clickable while the DOM keeps a single link.
     &::after {
       content: '';
       position: absolute;
@@ -123,14 +121,10 @@
   }
 }
 
-// The cover box sets the size, not the image: as a direct flex item the image took its height from
-// its intrinsic size (it changes with the `srcset` variant and the browser) and could shrink,
-// leaving the cover cropped and empty space around it.
 .card__media {
   flex: 0 0 auto;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  // Shown while the image loads, instead of a white gap.
   background: var(--gradient-brand);
 }
 

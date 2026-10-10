@@ -1,8 +1,6 @@
 FROM python:3.12-slim
 
 ARG POETRY_VERSION=2.5.1
-# "true" installs the dev group too (pytest, ruff, mypy) so tests can run inside the container.
-# The production Compose file builds with INSTALL_DEV=false.
 ARG INSTALL_DEV=true
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -37,5 +35,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
 
-# Migrations, then seeding + Flask dev server (development) or Gunicorn (FLASK_ENV=production).
 CMD ["sh", "scripts/start.sh"]

@@ -1,9 +1,3 @@
-"""Dates and times through the API and PostgreSQL (``timestamptz`` columns).
-
-Schedules are instants: the API accepts any offset, stores the instant and always answers in UTC.
-The frontend shows them in Colombia time (``America/Bogota``).
-"""
-
 from datetime import UTC, datetime
 from typing import Any
 
@@ -15,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.infrastructure.database.models import EventModel, SessionModel
 from tests.integration.http.conftest import ApiUser
 
-# 8:00 AM to 11:59 PM on October 10 in Colombia (UTC-5).
 EVENT = {
     "name": "Python Conference",
     "description": None,
@@ -24,7 +17,6 @@ EVENT = {
     "end_date": "2030-10-10T23:59:00-05:00",
     "capacity": 150,
 }
-# 2:30 PM to 11:30 PM in Colombia: the end is already October 11 in UTC.
 SESSION = {
     "title": "Clean architecture",
     "description": None,
@@ -101,7 +93,6 @@ def test_answers_in_utc_whatever_the_timezone_of_the_database_session(
 ) -> None:
     session_id = _create_session(db_client, organizer, event["id"]).get_json()["id"]
 
-    # Only for this test transaction: PostgreSQL now presents timestamptz values in Colombia time.
     connection.execute(text("SET LOCAL TIME ZONE 'America/Bogota'"))
     shown = connection.execute(
         text("SELECT start_time::text FROM sessions WHERE id = :id"), {"id": session_id}
@@ -141,7 +132,6 @@ def test_saving_the_returned_schedule_again_does_not_shift_it(
 def test_session_must_still_be_inside_the_event_schedule(
     db_client: FlaskClient, organizer: ApiUser, event: dict[str, Any]
 ) -> None:
-    # Ends at 12:30 AM on October 11 in Colombia, after the event (11:59 PM).
     response = _create_session(
         db_client, organizer, event["id"], end_time="2030-10-11T00:30:00-05:00"
     )

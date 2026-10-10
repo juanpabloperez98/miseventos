@@ -2,13 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 
 type PageItem = { kind: 'page'; page: number } | { kind: 'gap'; key: string };
 
-/** Pages always shown around the current one. */
 const SIBLINGS = 1;
 
-/**
- * Page navigation for server-side pagination. It only renders the controls and emits the requested
- * page: the parent owns the state (usually in the URL) and fetches the data.
- */
 @Component({
   selector: 'app-pagination',
   templateUrl: './pagination.html',

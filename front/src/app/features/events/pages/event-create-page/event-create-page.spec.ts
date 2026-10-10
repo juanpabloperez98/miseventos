@@ -105,7 +105,6 @@ describe('EventCreatePage', () => {
       'Preparando la subida de la imagen…',
     );
 
-    // A second click while uploading sends nothing.
     submitButton().click();
     http.expectOne(`${TEST_API_URL}/events/10/images/upload`).flush(SIGNED);
     http.expectOne(SIGNED.upload_url).flush({});

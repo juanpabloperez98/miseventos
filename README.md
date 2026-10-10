@@ -1,118 +1,118 @@
 # Mis Eventos
 
-Plataforma de gestión de eventos: API REST en Flask ([`back/`](back/README.md)), cliente web en
-Angular ([`front/`](front/README.md)) y PostgreSQL, orquestados con Docker Compose.
+Event management platform: a Flask REST API ([`back/`](back/README.md)), an Angular web client
+([`front/`](front/README.md)) and PostgreSQL, orchestrated with Docker Compose.
 
 ```text
-                 navegador
+                  browser
                     │  http://localhost:4200
                     ▼
         ┌──────────────────────────┐
-        │ frontend (Nginx)         │  Angular compilado + proxy /api/ → backend:5000
+        │ frontend (Nginx)         │  compiled Angular + proxy /api/ → backend:5000
         └────────────┬─────────────┘
-                     │  red Docker "miseventos"
+                     │  Docker network "miseventos"
         ┌────────────▼─────────────┐
         │ backend (Flask)          │  dev: Flask --debug · prod: Gunicorn
         └────────────┬─────────────┘
         ┌────────────▼─────────────┐
-        │ postgres:17-alpine       │  volumen nombrado postgres_data
+        │ postgres:17-alpine       │  named volume postgres_data
         └──────────────────────────┘
 ```
 
-| Archivo                                                 | Contenido                                                                    |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `docker-compose.yml`                                    | Stack completo en modo **desarrollo** (configuración por defecto)            |
-| `docker-compose.prod.yml`                               | **Producción**: solo backend (Gunicorn) + PostgreSQL                         |
-| `back/Dockerfile`, `back/scripts/start.sh`              | Imagen del backend: migraciones → seeder (solo desarrollo) → servidor        |
-| `front/Dockerfile`, `front/nginx/default.conf.template` | Build de Angular con Node y servido con Nginx (fallback SPA y proxy `/api/`) |
+| File                                                    | Contents                                                                   |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `docker-compose.yml`                                    | Full stack in **development** mode (default configuration)                 |
+| `docker-compose.prod.yml`                               | **Production**: backend (Gunicorn) + PostgreSQL only                       |
+| `back/Dockerfile`, `back/scripts/start.sh`              | Backend image: migrations → seeder (development only) → server             |
+| `front/Dockerfile`, `front/nginx/default.conf.template` | Angular built with Node and served by Nginx (SPA fallback and `/api/` proxy) |
 
-## Requisitos previos
+## Requirements
 
-- Docker Engine con Docker Compose v2.24 o superior (los overrides usan `!reset`).
-- Solo para desarrollo del frontend fuera de Docker: Node.js 22 (ver [`front/README.md`](front/README.md)).
+- Docker Engine with Docker Compose v2.24 or later (the overrides use `!reset`).
+- Only for frontend development outside Docker: Node.js 22 (see [`front/README.md`](front/README.md)).
 
-## Configuración inicial
+## Initial setup
 
 ```bash
-cp .env.example .env              # Credenciales de PostgreSQL y puertos publicados
-cp back/.env.example back/.env    # Configuración del backend (JWT, CORS, seeders...)
+cp .env.example .env              # PostgreSQL credentials and published ports
+cp back/.env.example back/.env    # Backend settings (JWT, CORS, seeders...)
 ```
 
-Edita ambos archivos y sustituye los valores de ejemplo (contraseñas, `JWT_SECRET_KEY` de al menos 32
-caracteres, contraseñas `SEED_*`). Los `.env` están excluidos de Git y de las imágenes Docker
-(`.gitignore` y `back/.dockerignore`).
+Edit both files and replace the example values (passwords, a `JWT_SECRET_KEY` of at least 32
+characters, `SEED_*` passwords). The `.env` files are excluded from Git and from the Docker images
+(`.gitignore` and `back/.dockerignore`).
 
-| Variable (`.env` raíz)                              | Uso                                                                                   | Por defecto      |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------- |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Credenciales de PostgreSQL; Compose construye con ellas el `DATABASE_URL` del backend | — (obligatorias) |
-| `POSTGRES_HOST_PORT`                                | Puerto de PostgreSQL en el host (solo desarrollo)                                     | `5432`           |
-| `BACKEND_HOST_PORT`                                 | Puerto de la API en el host (solo desarrollo)                                         | `5000`           |
-| `FRONTEND_HOST_PORT`                                | Puerto del frontend Nginx en el host                                                  | `4200`           |
+| Variable (root `.env`)                              | Purpose                                                                       | Default        |
+| --------------------------------------------------- | ----------------------------------------------------------------------------- | -------------- |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | PostgreSQL credentials; Compose uses them to build the backend `DATABASE_URL` | — (required)   |
+| `POSTGRES_HOST_PORT`                                | PostgreSQL port on the host (development only)                                | `5432`         |
+| `BACKEND_HOST_PORT`                                 | API port on the host (development only)                                       | `5000`         |
+| `FRONTEND_HOST_PORT`                                | Port of the Nginx frontend on the host                                        | `4200`         |
 
-Las variables del backend (`FLASK_ENV`, `JWT_SECRET_KEY`, `JWT_EXPIRATION_MINUTES`, `CORS_ORIGINS`,
-`LOG_LEVEL`, `SEED_*`, `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`) están descritas en
-`back/.env.example` y en [`back/README.md`](back/README.md#environment-variables).
+The backend variables (`FLASK_ENV`, `JWT_SECRET_KEY`, `JWT_EXPIRATION_MINUTES`, `CORS_ORIGINS`,
+`LOG_LEVEL`, `SEED_*`, `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`) are described in
+`back/.env.example` and in [`back/README.md`](back/README.md#environment-variables).
 
-**El frontend no tiene secretos.** Su única configuración es `apiUrl`, que se fija al compilar
-(`front/src/environments/`) y es pública: en producción vale `/api` (ruta relativa hacia el proxy de
-Nginx). Cambiar variables del contenedor no modifica el bundle ya compilado; la única variable del
-contenedor del frontend es `BACKEND_UPSTREAM`, el destino del proxy dentro de la red Docker
-(`http://backend:5000` por defecto).
+**The frontend has no secrets.** Its only setting is `apiUrl`, which is fixed at build time
+(`front/src/environments/`) and is public: in production it is `/api` (a relative path to the Nginx
+proxy). Changing container variables does not modify the bundle that is already built; the only
+variable of the frontend container is `BACKEND_UPSTREAM`, the target of the proxy inside the Docker
+network (`http://backend:5000` by default).
 
-## Levantar todo el stack
+## Running the full stack
 
-### Desarrollo (por defecto)
+### Development (default)
 
 ```bash
 docker compose up -d --build
-docker compose ps        # los tres servicios deben aparecer como (healthy)
+docker compose ps        # the three services must show as (healthy)
 ```
 
-| Servicio                                         | URL                                                                 |
-| ------------------------------------------------ | ------------------------------------------------------------------- |
-| Frontend (Nginx, build de producción de Angular) | <http://localhost:4200>                                             |
-| API directa                                      | <http://localhost:5000/api>                                         |
-| Salud del backend                                | <http://localhost:5000/health>                                      |
-| Swagger UI / OpenAPI                             | <http://localhost:5000/docs> · <http://localhost:5000/openapi.json> |
-| PostgreSQL                                       | `localhost:5432`                                                    |
+| Service                                           | URL                                                                 |
+| ------------------------------------------------- | ------------------------------------------------------------------- |
+| Frontend (Nginx, Angular production build)        | <http://localhost:4200>                                             |
+| Direct API                                        | <http://localhost:5000/api>                                         |
+| Backend health                                    | <http://localhost:5000/health>                                      |
+| Swagger UI / OpenAPI                              | <http://localhost:5000/docs> · <http://localhost:5000/openapi.json> |
+| PostgreSQL                                        | `localhost:5432`                                                    |
 
-En desarrollo el backend monta `./back` y usa el servidor de Flask con recarga; al arrancar aplica las
-migraciones y ejecuta el seeder idempotente (no duplica datos). El frontend del contenedor es
-siempre el build optimizado servido por Nginx; para recarga en caliente usa `npm start` (siguiente
-sección).
+In development the backend mounts `./back` and uses the Flask server with hot reload; on start-up it
+applies the migrations and runs the idempotent seeder (it never duplicates data). The frontend
+container always serves the optimized build through Nginx; for hot reload use `npm start` (next
+section).
 
-### Producción
+### Production
 
-`docker-compose.prod.yml` es independiente (**no** se aplica encima de `docker-compose.yml`) y solo
-ejecuta el backend con Gunicorn y PostgreSQL. El frontend no forma parte de él: su build estático lo
-sirve un Nginx instalado en el servidor, que reenvía `/api/` a `127.0.0.1:5001`
-(configuración del servidor fuera de este repositorio).
+`docker-compose.prod.yml` is standalone (it is **not** applied on top of `docker-compose.yml`) and
+only runs the backend with Gunicorn and PostgreSQL. The frontend is not part of it: its static build
+is served by an Nginx installed on the server, which forwards `/api/` to `127.0.0.1:5001` (server
+configuration outside this repository).
 
-Configuración en el servidor (archivos ignorados por Git):
+Configuration on the server (files ignored by Git):
 
-| Archivo                                      | Variables                                                                                                                                                          |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.env` (raíz, plantilla `.env.example`)      | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (obligatorias: Compose falla si faltan); `BACKEND_ENV_FILE` opcional. El puerto es fijo (`127.0.0.1:5001`) |
-| `back/.env` (o el de `BACKEND_ENV_FILE`)     | `JWT_SECRET_KEY` (obligatoria), `CORS_ORIGINS`, `JWT_EXPIRATION_MINUTES`, `LOG_LEVEL`, `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `CLOUDINARY_*`, `EVENT_IMAGE_MAX_BYTES` |
+| File                                          | Variables                                                                                                                                                                  |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.env` (root, template `.env.example`)        | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (required: Compose fails if they are missing); `BACKEND_ENV_FILE` optional. The port is fixed (`127.0.0.1:5001`)        |
+| `back/.env` (or the one in `BACKEND_ENV_FILE`) | `JWT_SECRET_KEY` (required), `CORS_ORIGINS`, `JWT_EXPIRATION_MINUTES`, `LOG_LEVEL`, `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `CLOUDINARY_*`, `EVENT_IMAGE_MAX_BYTES`        |
 
-- Sustituye todos los valores de ejemplo (`change-me`, `replace-with-...`). `POSTGRES_PASSWORD` se
-  inserta sin codificar en `DATABASE_URL`: usa solo letras, dígitos, `-` y `_`
+- Replace every example value (`change-me`, `replace-with-...`). `POSTGRES_PASSWORD` is inserted
+  into `DATABASE_URL` without URL-encoding: use only letters, digits, `-` and `_`
   (`python3 -c "import secrets; print(secrets.token_urlsafe(32))"`).
-- `docker-compose.prod.yml` fija `FLASK_ENV=production`, `DATABASE_URL` y `SEED_*_ENABLED=false`, por
-  encima de lo que diga `back/.env`.
-- Si el frontend se sirve en el mismo dominio que `/api/`, deja `CORS_ORIGINS` vacío.
+- `docker-compose.prod.yml` sets `FLASK_ENV=production`, `DATABASE_URL` and `SEED_*_ENABLED=false`,
+  overriding whatever `back/.env` says.
+- If the frontend is served on the same domain as `/api/`, leave `CORS_ORIGINS` empty.
 
 ```bash
-docker compose -f docker-compose.prod.yml config --quiet     # valida archivo y variables
+docker compose -f docker-compose.prod.yml config --quiet     # validates the file and the variables
 docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml ps                 # ambos servicios (healthy)
+docker compose -f docker-compose.prod.yml ps                 # both services (healthy)
 curl -fsS http://127.0.0.1:5001/health
 ```
 
-**Migraciones.** En cada arranque, `back/scripts/start.sh` valida la configuración, ejecuta
-`alembic upgrade head` (solo hacia delante) y después arranca Gunicorn; en el primer despliegue crea
-el esquema. Para una actualización que incluya migraciones, haz antes un backup de la base de datos
-y aplícalas de forma explícita antes de sustituir el backend:
+**Migrations.** On every start, `back/scripts/start.sh` validates the settings, runs
+`alembic upgrade head` (forward only) and then starts Gunicorn; on the first deployment it creates
+the schema. For an update that includes migrations, back up the database first and apply them
+explicitly before replacing the backend:
 
 ```bash
 docker compose -f docker-compose.prod.yml build backend
@@ -121,170 +121,172 @@ docker compose -f docker-compose.prod.yml up -d backend
 docker compose -f docker-compose.prod.yml exec backend alembic current
 ```
 
-Si una migración falla, PostgreSQL revierte la transacción y el backend en marcha no cambia; si
-fallara durante un arranque, el contenedor se reiniciaría en bucle hasta corregirla (ver
-`docker compose -f docker-compose.prod.yml logs backend`).
+If a migration fails, PostgreSQL rolls back the transaction and the running backend is not
+affected; if it failed during a start-up, the container would restart in a loop until it is fixed
+(see `docker compose -f docker-compose.prod.yml logs backend`).
 
-Diferencias respecto a desarrollo:
+Differences from development:
 
-|                    | Desarrollo                                                  | Producción                                                                                         |
-| ------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Backend            | Flask `--debug`, código montado, dependencias de desarrollo | Gunicorn, imagen `miseventos-backend:prod` sin dependencias de desarrollo ni código montado        |
-| `FLASK_ENV`        | El de `back/.env`                                           | `production` (forzado por `docker-compose.prod.yml`)                                               |
-| Seeder             | Se ejecuta en cada arranque (idempotente)                   | Prohibido: `SEED_*_ENABLED` forzados a `false` y el backend no arranca si alguno vale `true`       |
-| `JWT_SECRET_KEY`   | Mínimo 32 caracteres                                        | Además: sin marcadores de ejemplo y con al menos 16 caracteres distintos, o el backend no arranca  |
-| Puertos publicados | 4200, 5000, 5432                                            | Solo 5000 en `127.0.0.1` (para el Nginx del host); PostgreSQL solo es accesible en una red interna |
+|                 | Development                                              | Production                                                                                             |
+| --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Backend         | Flask `--debug`, mounted source code, dev dependencies   | Gunicorn, `miseventos-backend:prod` image without dev dependencies or mounted source code              |
+| `FLASK_ENV`     | The value in `back/.env`                                 | `production` (forced by `docker-compose.prod.yml`)                                                     |
+| Seeder          | Runs on every start (idempotent)                         | Forbidden: `SEED_*_ENABLED` forced to `false`, and the backend does not start if any of them is `true` |
+| `JWT_SECRET_KEY`| At least 32 characters                                   | Also: no example placeholders and at least 16 distinct characters, or the backend does not start       |
+| Published ports | 4200, 5000, 5432                                         | Only 5000 on `127.0.0.1` (for the host Nginx); PostgreSQL is only reachable on an internal network     |
 
-Ver [Seguridad en producción](#seguridad-en-producción) antes de un despliegue real.
+See [Production security](#production-security) before a real deployment.
 
-## Seguridad en producción
+## Production security
 
-### Configuración del backend y `JWT_SECRET_KEY`
+### Backend settings and `JWT_SECRET_KEY`
 
-Usa un archivo de configuración propio del servidor, fuera del repositorio, e indícalo con
-`BACKEND_ENV_FILE` en el `.env` raíz (por defecto `./back/.env`):
+Use a settings file of your own on the server, outside the repository, and point to it with
+`BACKEND_ENV_FILE` in the root `.env` (default `./back/.env`):
 
 ```bash
-# Genera una clave distinta por entorno y guárdala solo en ese archivo o en tu gestor de secretos.
+# Generate a different key per environment and store it only in that file or in your secrets manager.
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-- El backend valida la configuración **antes de ejecutar las migraciones** (`back/scripts/start.sh`).
-  En producción se niega a arrancar si `JWT_SECRET_KEY` falta, tiene menos de 32 caracteres, contiene
-  un valor de ejemplo (`replace-with`, `change-me`) o tiene menos de 16 caracteres distintos. Los
-  mensajes de error nunca muestran la clave.
-- La clave no se genera automáticamente: debe ser estable, porque cambiarla invalida todos los
-  tokens emitidos.
-- En desarrollo basta con los 32 caracteres; el valor de `back/.env.example` sirve para probar.
-- Cambia también `POSTGRES_PASSWORD` y no publiques nunca los `.env` (están en `.gitignore` y en los
-  `.dockerignore`).
+- The backend validates its settings **before running the migrations** (`back/scripts/start.sh`).
+  In production it refuses to start if `JWT_SECRET_KEY` is missing, has fewer than 32 characters,
+  contains an example value (`replace-with`, `change-me`) or has fewer than 16 distinct characters.
+  Error messages never show the key.
+- The key is not generated automatically: it must be stable, because changing it invalidates every
+  issued token.
+- In development 32 characters are enough; the value in `back/.env.example` is fine for testing.
+- Also change `POSTGRES_PASSWORD`, and never publish the `.env` files (they are listed in
+  `.gitignore` and in the `.dockerignore` files).
 
 ### Seeders
 
-- `docker-compose.prod.yml` fuerza `SEED_ADMIN_ENABLED`, `SEED_ORGANIZER_ENABLED`,
-  `SEED_ATTENDEE_ENABLED` y `SEED_DEMO_DATA_ENABLED` a `false`.
-- Si con `FLASK_ENV=production` alguno de ellos vale `true`, el backend (y cualquier comando `flask`)
-  falla al arrancar con `Seeding must be disabled in production`, sin tocar la base de datos.
-- `start.sh` no ejecuta el seeder en producción, y el comando `seed-initial-data` se niega igualmente
-  si se lanza a mano.
+- `docker-compose.prod.yml` forces `SEED_ADMIN_ENABLED`, `SEED_ORGANIZER_ENABLED`,
+  `SEED_ATTENDEE_ENABLED` and `SEED_DEMO_DATA_ENABLED` to `false`.
+- If any of them is `true` with `FLASK_ENV=production`, the backend (and any `flask` command) fails
+  on start-up with `Seeding must be disabled in production`, without touching the database.
+- `start.sh` does not run the seeder in production, and the `seed-initial-data` command also refuses
+  to run if it is launched by hand.
 
 ### HTTPS
 
-En producción, HTTPS lo termina el Nginx del servidor, que se configura fuera de este repositorio.
+In production, HTTPS is terminated by the server's Nginx, which is configured outside this
+repository.
 
-Lo que sigue aplica al frontend **dockerizado** (`front/Dockerfile`), que ahora solo forma parte del
-stack de desarrollo, si se publica detrás de un **terminador TLS externo** (proxy inverso o
-balanceador del proveedor) delante del puerto del frontend.
+What follows applies to the **dockerized** frontend (`front/Dockerfile`), which is now only part of
+the development stack, if it is published behind an **external TLS terminator** (a reverse proxy or
+the provider's load balancer) in front of the frontend port.
 
-1. El proxy externo termina TLS, reenvía a `http://<servidor>:${FRONTEND_HOST_PORT}` y fija la
-   cabecera `X-Forwarded-Proto` (sobrescribiendo la del cliente).
-2. Nginx conserva ese `X-Forwarded-Proto` al reenviar `/api/` al backend.
-3. Variables del contenedor del frontend (`ENV` de `front/Dockerfile`, sobrescribibles en el bloque
-   `environment` del servicio `frontend`):
+1. The external proxy terminates TLS, forwards to `http://<servidor>:${FRONTEND_HOST_PORT}`
+   (`<servidor>` being the server host) and sets the `X-Forwarded-Proto` header (overwriting the
+   client's value).
+2. Nginx keeps that `X-Forwarded-Proto` when it forwards `/api/` to the backend.
+3. Variables of the frontend container (`ENV` in `front/Dockerfile`, which can be overridden in the
+   `environment` block of the `frontend` service):
 
-   | Variable           | Efecto                                                                                                                                                                                                    | Por defecto         |
-   | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-   | `HTTPS_REDIRECT=1` | Redirige con `301` a `https://` las peticiones que el proxy marca como `X-Forwarded-Proto: http`. Las peticiones sin esa cabecera (health checks, tráfico interno) no se redirigen, así que no hay bucles | `0`                 |
-   | `HSTS_HEADER`      | Valor de `Strict-Transport-Security`, enviado solo en respuestas servidas por HTTPS                                                                                                                       | vacío (desactivado) |
+   | Variable           | Effect                                                                                                                                                                                       | Default            |
+   | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+   | `HTTPS_REDIRECT=1` | Redirects with `301` to `https://` the requests that the proxy marks as `X-Forwarded-Proto: http`. Requests without that header (health checks, internal traffic) are not redirected, so there are no loops | `0`                |
+   | `HSTS_HEADER`      | Value of `Strict-Transport-Security`, sent only on responses served over HTTPS                                                                                                               | empty (disabled)   |
 
-   Activa `HTTPS_REDIRECT` solo detrás de un proxy que controle `X-Forwarded-Proto`. Empieza con
-   `HSTS_HEADER=max-age=300` y aumenta el valor (y `includeSubDomains`) solo cuando HTTPS funcione en
-   todos los hosts afectados.
+   Enable `HTTPS_REDIRECT` only behind a proxy that controls `X-Forwarded-Proto`. Start with
+   `HSTS_HEADER=max-age=300` and increase the value (and add `includeSubDomains`) only once HTTPS
+   works on every affected host.
 
-4. El backend no genera URLs absolutas, redirecciones ni cookies, por lo que no necesita conocer el
-   esquema original (no se usa `ProxyFix`).
+4. The backend generates no absolute URLs, redirects or cookies, so it does not need to know the
+   original scheme (`ProxyFix` is not used).
 
-Pendiente para un despliegue real: dominio, certificado y el proxy o balanceador con TLS.
+Pending for a real deployment: domain, certificate and the proxy or load balancer with TLS.
 
-### Cabeceras del frontend
+### Frontend headers
 
-Nginx envía `Content-Security-Policy` (`script-src 'self'`, `connect-src 'self'`,
-`frame-ancestors 'none'`; `style-src` permite estilos inline porque Angular inserta los estilos de
-los componentes), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` y
-`Permissions-Policy` (`front/nginx/security-headers.conf`). El build de producción no usa el inlining
-de CSS crítico de Angular, que requiere un manejador `onload` inline incompatible con este CSP.
+Nginx sends `Content-Security-Policy` (`script-src 'self'`, `connect-src 'self'`,
+`frame-ancestors 'none'`; `style-src` allows inline styles because Angular inserts the component
+styles), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`
+(`front/nginx/security-headers.conf`). The production build does not use Angular's critical CSS
+inlining, which requires an inline `onload` handler that is incompatible with this CSP.
 
-## Frontend en modo desarrollo (recarga en caliente)
+## Frontend in development mode (hot reload)
 
-Levanta solo la base de datos y la API, y ejecuta Angular en el host:
+Start only the database and the API, and run Angular on the host:
 
 ```bash
 docker compose up -d postgres backend
 cd front
 npm install
-npm start               # http://localhost:4200 → llama a http://localhost:5000/api (CORS_ORIGINS)
+npm start               # http://localhost:4200 → calls http://localhost:5000/api (CORS_ORIGINS)
 ```
 
-`npm start` usa el puerto 4200, el mismo que el contenedor `frontend`: si este está en marcha,
-detenlo con `docker compose stop frontend` o cambia `FRONTEND_HOST_PORT` en `.env`.
+`npm start` uses port 4200, the same as the `frontend` container: if that container is running,
+stop it with `docker compose stop frontend` or change `FRONTEND_HOST_PORT` in `.env`.
 
-Para levantar **solo el frontend dockerizado**: `docker compose up -d --build frontend`. Nginx sirve la
-aplicación aunque el backend no esté disponible; las llamadas a `/api/` devolverán `502` hasta que lo
-esté y la interfaz mostrará su estado de error con opción de reintentar.
+To start **only the dockerized frontend**: `docker compose up -d --build frontend`. Nginx serves the
+application even if the backend is not available; calls to `/api/` return `502` until it is, and
+the interface shows its error state with a retry option.
 
-## Pruebas
+## Tests
 
 ```bash
-# Backend (dentro del contenedor de desarrollo). Las pruebas de integración usan TEST_DATABASE_URL
-# (base <POSTGRES_DB>_test, creada automáticamente), nunca la base de desarrollo.
-docker compose exec backend pytest                         # unitarias + integración
-docker compose exec backend pytest tests/unit              # solo unitarias
-docker compose exec backend pytest tests/integration       # base de datos, HTTP y CLI
+# Backend (inside the development container). Integration tests use TEST_DATABASE_URL
+# (database <POSTGRES_DB>_test, created automatically), never the development database.
+docker compose exec backend pytest                         # unit + integration
+docker compose exec backend pytest tests/unit              # unit tests only
+docker compose exec backend pytest tests/integration       # database, HTTP and CLI
 docker compose exec backend ruff check . && docker compose exec backend ruff format --check .
 docker compose exec backend mypy
-docker compose exec backend alembic check                  # modelos y migraciones coinciden
+docker compose exec backend alembic check                  # models and migrations match
 
-# Frontend (en el host)
+# Frontend (on the host)
 cd front
 npm run lint
 npm run test:ci
 npm run build
 ```
 
-## Operación
+## Operations
 
 ```bash
-docker compose ps                         # estado y salud de los contenedores
-docker compose logs -f                    # logs de todos los servicios
-docker compose logs -f backend            # logs de un servicio
-docker inspect --format '{{json .State.Health}}' miseventos-backend-1   # detalle del health check
+docker compose ps                         # container status and health
+docker compose logs -f                    # logs of every service
+docker compose logs -f backend            # logs of one service
+docker inspect --format '{{json .State.Health}}' miseventos-backend-1   # health check details
 
-docker compose up -d --build              # reconstruir imágenes y recrear lo que haya cambiado
-docker compose build --no-cache frontend  # reconstruir una imagen desde cero
-docker compose restart backend            # reiniciar un servicio
+docker compose up -d --build              # rebuild images and recreate whatever changed
+docker compose build --no-cache frontend  # rebuild an image from scratch
+docker compose restart backend            # restart a service
 
-docker compose stop                       # detener sin eliminar contenedores
-docker compose down                       # eliminar contenedores y red; los datos se conservan
+docker compose stop                       # stop without removing containers
+docker compose down                       # remove containers and network; data is kept
 ```
 
-Para el stack de producción, usa `docker compose -f docker-compose.prod.yml` en cada comando; su
-volumen es `miseventos-prod_postgres_data`.
+For the production stack, use `docker compose -f docker-compose.prod.yml` in every command; its
+volume is `miseventos-prod_postgres_data`.
 
-Los datos de PostgreSQL viven en el volumen nombrado `miseventos_postgres_data` y sobreviven a
-`stop`, `down` y a la recreación de contenedores. **`docker compose down -v` borra el volumen y todos
-los datos**; úsalo solo si quieres empezar de cero.
+PostgreSQL data lives in the named volume `miseventos_postgres_data` and survives `stop`, `down` and
+container re-creation. **`docker compose down -v` deletes the volume and all the data**; use it only
+if you want to start from scratch.
 
 ### Health checks
 
-| Servicio   | Comprobación                                                              |
+| Service    | Check                                                                     |
 | ---------- | ------------------------------------------------------------------------- |
-| `postgres` | `pg_isready` (definido en `docker-compose.yml`)                           |
-| `backend`  | `GET /health` desde dentro del contenedor (definido en `back/Dockerfile`) |
-| `frontend` | Nginx sirve `index.html` (definido en `front/Dockerfile`)                 |
+| `postgres` | `pg_isready` (defined in `docker-compose.yml`)                            |
+| `backend`  | `GET /health` from inside the container (defined in `back/Dockerfile`)    |
+| `frontend` | Nginx serves `index.html` (defined in `front/Dockerfile`)                 |
 
-El backend espera a que PostgreSQL esté `healthy` antes de arrancar (`depends_on`). Eso solo ordena el
-arranque: si la base de datos se reinicia después, el backend sigue en marcha y recupera las
-conexiones en las siguientes peticiones. El frontend no depende de ningún servicio. Todos usan
+The backend waits for PostgreSQL to be `healthy` before starting (`depends_on`). That only orders
+the start-up: if the database restarts later, the backend keeps running and recovers its
+connections on the following requests. The frontend depends on no other service. All of them use
 `restart: unless-stopped`.
 
-## Proxy `/api/` de Nginx
+## Nginx `/api/` proxy
 
-- El navegador siempre llama a rutas relativas (`/api/...`), por lo que no necesita CORS ni conocer el
-  nombre `backend`, que solo existe dentro de la red Docker.
-- Nginx reenvía la URI sin modificarla (las rutas del backend ya empiezan por `/api`), junto con el
-  método, el cuerpo, la cabecera `Authorization` y las cabeceras `X-Forwarded-*`.
-- El nombre del backend se resuelve en cada petición con el DNS interno de Docker, de modo que Nginx
-  arranca aunque el backend no esté listo y sigue funcionando si el contenedor del backend se recrea.
-- Rutas de Angular (`/events/2`, `/auth/login`...): `try_files` devuelve `index.html`, así que pueden
-  abrirse o recargarse directamente. Los recursos con hash se sirven con caché de un año e
-  `index.html` sin caché.
+- The browser always calls relative paths (`/api/...`), so it needs neither CORS nor the `backend`
+  name, which only exists inside the Docker network.
+- Nginx forwards the URI unchanged (backend routes already start with `/api`), together with the
+  method, the body, the `Authorization` header and the `X-Forwarded-*` headers.
+- The backend name is resolved on every request through Docker's internal DNS, so Nginx starts even
+  if the backend is not ready and keeps working if the backend container is re-created.
+- Angular routes (`/events/2`, `/auth/login`...): `try_files` returns `index.html`, so they can be
+  opened or reloaded directly. Hashed assets are served with a one-year cache and `index.html` with
+  no cache.

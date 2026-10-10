@@ -1,5 +1,3 @@
-"""CloudinaryImageStorage with the SDK network calls replaced: no credentials nor network needed."""
-
 from dataclasses import asdict
 from typing import Any
 

@@ -278,7 +278,6 @@ class FakeImageStorage(ImageStorage):
         self.images.pop(public_id, None)
 
     def upload(self, public_id: str, *, format: str = "jpg", size: int = 2048) -> StoredImage:
-        """Simulates a successful direct upload from the browser."""
         image = StoredImage(
             public_id=public_id,
             secure_url=f"https://res.cloudinary.com/demo/image/upload/v1/{public_id}.{format}",

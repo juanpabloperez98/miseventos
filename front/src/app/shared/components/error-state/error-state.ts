@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 
 import { Button } from '../button/button';
 
-/** Error panel announced as an alert, with an optional retry action. */
 @Component({
   selector: 'app-error-state',
   imports: [Button],

@@ -31,7 +31,6 @@ import { EventsService } from '../../services/events.service';
 
 export const EVENTS_PER_PAGE = 9;
 
-/** Converts the `page` query param into a positive integer (defaults to 1). */
 function toPage(value: unknown): number {
   const page = Number(value);
   return Number.isInteger(page) && page > 0 ? page : 1;
@@ -41,10 +40,6 @@ function toSearch(value: unknown): string {
   return typeof value === 'string' ? value.trim().slice(0, EVENT_LIMITS.searchMaxLength) : '';
 }
 
-/**
- * Landing page: hero with search and the paginated event catalog. Page and search live in the URL
- * (`?page=2&search=angular`), so results are shareable and the back button works.
- */
 @Component({
   selector: 'app-event-list-page',
   imports: [
@@ -63,7 +58,6 @@ function toSearch(value: unknown): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventListPage {
-  /** Query params bound by the router (`withComponentInputBinding`). */
   readonly page = input(1, { transform: toPage });
   readonly search = input('', { transform: toSearch });
 
@@ -82,7 +76,6 @@ export class EventListPage {
   private readonly resultsHeading = viewChild<ElementRef<HTMLElement>>('resultsHeading');
   private readonly reloads = signal(0);
 
-  /** Every input that changes the results. The user is included because visibility depends on it. */
   private readonly query = computed(() => ({
     page: this.page(),
     search: this.search(),
@@ -105,7 +98,6 @@ export class EventListPage {
   });
 
   constructor() {
-    // Keep the search box in sync with the URL (e.g. browser back button).
     effect(() => this.searchControl.setValue(this.search(), { emitEvent: false }));
   }
 

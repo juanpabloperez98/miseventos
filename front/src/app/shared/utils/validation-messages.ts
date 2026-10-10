@@ -11,14 +11,9 @@ const DEFAULT_MESSAGES: Record<string, MessageFactory> = {
   min: (detail) => `El valor mínimo es ${lengthOf(detail, 'min')}.`,
   max: (detail) => `El valor máximo es ${lengthOf(detail, 'max')}.`,
   integer: () => 'Introduce un número entero.',
-  // Messages coming from the backend are already human readable.
   server: (detail) => (typeof detail === 'string' ? detail : 'Valor no válido.'),
 };
 
-/**
- * Returns the message for the first validation error of a control.
- * `overrides` customizes messages per error key (e.g. `{ dateOrder: 'La fecha...' }`).
- */
 export function validationMessage(
   errors: ValidationErrors | null,
   overrides: Record<string, string> = {},

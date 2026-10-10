@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Empty list or empty result. Optional actions are projected into the panel. */
 @Component({
   selector: 'app-empty-state',
   template: `

@@ -4,8 +4,6 @@ from app.domain.value_objects import Page, PageRequest
 
 
 class ListSpeakersUseCase:
-    """Read-only speaker catalog, used to assign speakers to sessions."""
-
     def __init__(self, speakers: SpeakerRepository) -> None:
         self._speakers = speakers
 

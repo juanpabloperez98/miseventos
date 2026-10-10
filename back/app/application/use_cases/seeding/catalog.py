@@ -51,7 +51,7 @@ class SeedCatalog:
     sessions: tuple[SessionSeed, ...]
 
 
-EVENT_START_TIME = timedelta(hours=14)  # 14:00 UTC, 09:00 in Colombia
+EVENT_START_TIME = timedelta(hours=14)
 
 DEFAULT_CATALOG = SeedCatalog(
     speakers=(

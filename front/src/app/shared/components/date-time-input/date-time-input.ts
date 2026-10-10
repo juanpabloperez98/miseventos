@@ -40,9 +40,7 @@ const DATE_LENGTH = 'yyyy-MM-dd'.length;
   ],
 })
 export class DateTimeInput implements ControlValueAccessor {
-  /** Id of the date input, so an external `<label for>` focuses it. */
   readonly inputId = input.required<string>();
-  /** Bounds as `yyyy-MM-ddTHH:mm`; only their date limits the date picker. */
   readonly min = input<string>();
   readonly max = input<string>();
   readonly required = input(false);
@@ -61,7 +59,6 @@ export class DateTimeInput implements ControlValueAccessor {
   protected readonly minDate = computed(() => this.min()?.slice(0, DATE_LENGTH) || null);
   protected readonly maxDate = computed(() => this.max()?.slice(0, DATE_LENGTH) || null);
 
-  /** Chosen value in the formats of the application, e.g. `10/10/2026, 2:30 PM`. */
   protected readonly summary = computed(() => formatAppDateTime(fromColombiaInput(this.value())));
 
   private readonly value = computed(() => {
@@ -115,7 +112,6 @@ export class DateTimeInput implements ControlValueAccessor {
   }
 
   protected touch(event: FocusEvent): void {
-    // Only when the focus leaves the whole group, not when moving between its parts.
     const host = event.currentTarget as HTMLElement;
     if (!host.contains(event.relatedTarget as Node | null)) {
       this.onTouched();

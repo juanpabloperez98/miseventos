@@ -50,7 +50,6 @@ describe('auth guards', () => {
     await harness.navigateByUrl('/events/new');
 
     expect(router.url).toBe('/forbidden');
-    // skipLocationChange: the address bar is not rewritten to /forbidden.
     expect(TestBed.inject(Location).path()).not.toContain('forbidden');
     expect(TestBed.inject(FlashMessageService).consume()?.text).toBe(
       'Tu cuenta no tiene permiso para gestionar eventos.',
