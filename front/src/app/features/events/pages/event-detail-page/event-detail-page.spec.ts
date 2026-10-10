@@ -9,6 +9,7 @@ import { FlashMessageService } from '../../../../core/services/flash-message.ser
 import {
   BlankPage,
   buildEvent,
+  buildImage,
   buildSession,
   cleanUpAuth,
   provideTestDependencies,
@@ -104,6 +105,25 @@ describe('EventDetailPage', () => {
     expect(page().querySelector('.session__time time')?.getAttribute('datetime')).toBe(
       '2030-05-10T15:00:00+00:00',
     );
+  });
+
+  it('should show the cover through responsive Cloudinary URLs, and nothing without image', async () => {
+    await open(buildEvent({ image: buildImage() }), []);
+
+    const cover = page().querySelector('img.event__cover');
+    expect(cover?.getAttribute('src')).toContain(
+      '/upload/f_auto,q_auto,c_fill,g_auto,w_400,h_225/',
+    );
+    expect(cover?.getAttribute('srcset')).toContain('w_1200,h_675/');
+    expect(cover?.getAttribute('srcset')).toContain('1920w');
+    expect(cover?.getAttribute('width')).toBe('400');
+    expect(cover?.getAttribute('height')).toBe('225');
+  });
+
+  it('should not render a cover for events without image', async () => {
+    await open(buildEvent(), []);
+
+    expect(page().querySelector('img.event__cover')).toBeNull();
   });
 
   it('should show a loading state until the event arrives', async () => {

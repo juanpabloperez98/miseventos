@@ -1,6 +1,15 @@
 /** Statuses defined by the backend (`EventStatus`). */
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
 
+/** `EventImageSchema`: cover image stored in Cloudinary (verified by the backend). */
+export interface EventImage {
+  public_id: string;
+  secure_url: string;
+  width: number;
+  height: number;
+  format: string;
+}
+
 /** `EventSchema`. Dates are ISO 8601 strings in UTC. */
 export interface EventModel {
   id: number;
@@ -13,6 +22,8 @@ export interface EventModel {
   status: EventStatus;
   /** Id of the user who created (and owns) the event. */
   created_by: number;
+  /** Cover image; `null` (or absent) when the event has none. */
+  image?: EventImage | null;
   created_at?: string;
   updated_at?: string;
 }

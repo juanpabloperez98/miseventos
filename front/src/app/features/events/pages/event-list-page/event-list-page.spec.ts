@@ -8,6 +8,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import {
   BlankPage,
   buildEvent,
+  buildImage,
   buildPage,
   cleanUpAuth,
   provideTestDependencies,
@@ -74,6 +75,25 @@ describe('EventListPage', () => {
     expect(textOf(cards[0].querySelector('.card__day'))).toBe('10');
     expect(textOf(cards[0].querySelector('.card__month'))).toBe('may');
     expect(textOf(page().querySelector('.results-header__count'))).toBe('2 eventos');
+  });
+
+  it('should show lazy, optimized card images and the default cover for the rest', async () => {
+    await open();
+    listRequest().flush(
+      buildPage([buildEvent({ id: 1, image: buildImage() }), buildEvent({ id: 2, image: null })]),
+    );
+    await settle();
+
+    const [withImage, withoutImage] = page().querySelectorAll('app-event-card');
+    const image = withImage.querySelector('img.card__image');
+    expect(image?.getAttribute('src')).toContain(
+      '/upload/f_auto,q_auto,c_fill,g_auto,w_400,h_250/',
+    );
+    expect(image?.getAttribute('srcset')).toContain('800w');
+    expect(image?.getAttribute('loading')).toBe('lazy');
+    expect(withoutImage.querySelector('img')?.getAttribute('src')).toBe(
+      'images/event-cover-default.svg',
+    );
   });
 
   it('should request the page and search from the URL', async () => {

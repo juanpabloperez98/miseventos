@@ -3,8 +3,10 @@ from app.domain.exceptions.base import (
     AuthorizationError,
     ConflictError,
     DomainError,
+    ExternalServiceError,
     InvalidValueError,
     NotFoundError,
+    ServiceUnavailableError,
 )
 from app.domain.exceptions.business import (
     AlreadyRegisteredToEventError,
@@ -14,6 +16,8 @@ from app.domain.exceptions.business import (
     EventCapacityExceededError,
     EventNotEditableError,
     EventNotOpenForRegistrationError,
+    ImageStorageError,
+    ImageStorageUnavailableError,
     InvalidCredentialsError,
     InvalidEventStatusTransitionError,
     InvalidTokenError,
@@ -31,9 +35,13 @@ __all__ = [
     "EventCapacityExceededError",
     "EventNotEditableError",
     "EventNotOpenForRegistrationError",
+    "ExternalServiceError",
+    "ImageStorageError",
+    "ImageStorageUnavailableError",
     "InvalidCredentialsError",
     "InvalidEventStatusTransitionError",
     "InvalidTokenError",
     "InvalidValueError",
     "NotFoundError",
+    "ServiceUnavailableError",
 ]

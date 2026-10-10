@@ -29,14 +29,17 @@ import {
   type EventStatus,
   type EventUpdatePayload,
 } from '../../models/event.model';
+import { type EventImageSelection } from '../../services/event-images.service';
+import { EventImageField } from '../event-image-field/event-image-field';
 
 /**
  * Create/edit form for events. Presentational: it validates and emits the payload, and the page
- * performs the request. Validation mirrors `EventCreateSchema` / `EventUpdateSchema`.
+ * performs the request. Validation mirrors `EventCreateSchema` / `EventUpdateSchema`. The cover
+ * image is reported separately (`imageChange`): it is uploaded once the event exists.
  */
 @Component({
   selector: 'app-event-form',
-  imports: [ReactiveFormsModule, FormField, Button],
+  imports: [ReactiveFormsModule, FormField, Button, EventImageField],
   templateUrl: './event-form.html',
   styleUrl: './event-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,8 +51,12 @@ export class EventForm {
   /** Field errors returned by the API (422), keyed by payload field. */
   readonly serverErrors = input<FieldErrors>({});
   readonly submitLabel = input('Guardar');
+  /** Progress of the cover image upload, shown under the image picker. */
+  readonly imageStatus = input<string | null>(null);
 
   readonly save = output<EventUpdatePayload>();
+  /** Cover image chosen by the user; the page applies it after saving the event. */
+  readonly imageChange = output<EventImageSelection>();
   readonly cancelled = output();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);

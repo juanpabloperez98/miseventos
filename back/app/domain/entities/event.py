@@ -2,6 +2,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 
 from app.domain.entities._validation import optional_text, require_positive, require_text
+from app.domain.entities.event_image import EventImage
 from app.domain.enums import EventRemoval, EventStatus
 from app.domain.exceptions import (
     EventCannotBeRemovedError,
@@ -24,6 +25,8 @@ class Event:
     created_by: int
     description: str | None = None
     status: EventStatus = EventStatus.DRAFT
+    # Read only: loaded with the event, changed through the event image use cases.
+    image: EventImage | None = None
     id: int | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

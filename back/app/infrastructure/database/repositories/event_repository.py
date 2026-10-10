@@ -6,6 +6,7 @@ from app.domain.ports import EventRepository, EventSearchCriteria, EventVisibili
 from app.domain.value_objects import Page, PageRequest
 from app.infrastructure.database.models import EventModel, RegistrationModel
 from app.infrastructure.database.repositories.base import SqlAlchemyRepository
+from app.infrastructure.database.repositories.event_image_repository import to_event_image
 
 
 class SqlAlchemyEventRepository(SqlAlchemyRepository[Event, EventModel], EventRepository):
@@ -62,6 +63,7 @@ class SqlAlchemyEventRepository(SqlAlchemyRepository[Event, EventModel], EventRe
             capacity=model.capacity,
             status=model.status,
             created_by=model.created_by,
+            image=to_event_image(model.image) if model.image is not None else None,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )

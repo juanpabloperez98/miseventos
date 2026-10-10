@@ -39,6 +39,8 @@
       [event]="current.data"
       [submitting]="submitting()"
       [serverErrors]="fieldErrors()"
+      [imageStatus]="imageStatus()"
+      (imageChange)="image.set($event)"
       (save)="update($event)"
       (cancelled)="cancel()"
     />

@@ -6,6 +6,7 @@ from app.adapters.http.schemas.common import (
     PaginationQuerySchema,
     UtcDateTime,
 )
+from app.adapters.http.schemas.event_images import EventImageSchema
 from app.domain.enums import EventStatus
 
 
@@ -52,6 +53,9 @@ class EventSchema(Schema):
     capacity = fields.Integer(required=True)
     status = fields.Enum(EventStatus, required=True)
     created_by = fields.Integer(required=True)
+    image = fields.Nested(
+        EventImageSchema, allow_none=True, metadata={"description": "Cover image, if any"}
+    )
     created_at = UtcDateTime()
     updated_at = UtcDateTime()
 

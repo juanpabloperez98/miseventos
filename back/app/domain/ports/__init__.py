@@ -1,8 +1,10 @@
+from app.domain.ports.event_image_repository import EventImageRepository
 from app.domain.ports.event_repository import (
     EventRepository,
     EventSearchCriteria,
     EventVisibility,
 )
+from app.domain.ports.image_storage import ImageStorage, SignedImageUpload, StoredImage
 from app.domain.ports.password_hasher import PasswordHasher
 from app.domain.ports.registration_repository import RegistrationRepository
 from app.domain.ports.seed_record_repository import (
@@ -18,16 +20,20 @@ from app.domain.ports.user_repository import UserRepository
 
 __all__ = [
     "AccessToken",
+    "EventImageRepository",
     "EventRepository",
     "EventSearchCriteria",
     "EventVisibility",
+    "ImageStorage",
     "PasswordHasher",
     "RegistrationRepository",
     "SeedEntityType",
     "SeedRecord",
     "SeedRecordRepository",
     "SessionRepository",
+    "SignedImageUpload",
     "SpeakerRepository",
+    "StoredImage",
     "TokenClaims",
     "TokenService",
     "UnitOfWork",

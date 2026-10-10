@@ -369,9 +369,31 @@ pruebas pueden sobrescribir con `{ provide: API_URL, useValue: '...' }`.
 ### Imágenes
 
 - Formatos modernos (**AVIF** o **WebP**) con dimensiones ajustadas a su contexto de uso.
-- Para imágenes de contenido usar la directiva `NgOptimizedImage` (`ngSrc`, `width`/`height` o
-  `fill`, `priority` solo para la imagen LCP). Evita saltos de diseño y aplica `loading="lazy"` por
-  defecto. Si se usa un CDN de imágenes, configurar su _loader_ en `app.config.ts`.
+- **Portadas de eventos (Cloudinary).** Las URLs se construyen solo en
+  `shared/utils/cloudinary-image.ts` (en plantillas, pipe `responsiveImage`): `f_auto` (AVIF/WebP
+  cuando el navegador los admite, sin forzar WebP), `q_auto` y `c_fill,g_auto` con proporción fija
+  por uso, generadas bajo demanda por el CDN de Cloudinary:
+
+  | Uso               | Proporción | Variantes (`srcset`)                    |
+  | ----------------- | ---------- | --------------------------------------- |
+  | Tarjeta (`card`)  | 16:10      | 400×250 (móvil), 800×500 (pantallas 2x) |
+  | Portada (`cover`) | 16:9       | 400×225, 800×450, 1200×675, 1920×1080   |
+
+  Los anchos siguen los dispositivos de referencia (móvil 400, tablet 800, escritorio 1200, alta
+  resolución 1920); la altura sigue la proporción real de cada lugar para que el diseño no salte.
+  Las tarjetas usan `loading="lazy"` y la portada del detalle `fetchpriority="high"`. No se usa
+  `NgOptimizedImage`: su _loader_ de Cloudinary solo varía el ancho (sin recorte con proporción fija)
+  y obligaría a configurar el `cloud_name` en el frontend; con `secure_url` basta.
+
+- **Subida.** `EventImagesService` pide la firma al backend (solo nombre, tipo y tamaño), envía el
+  archivo directamente a Cloudinary y confirma el `public_id`; el interceptor nunca añade el JWT a
+  Cloudinary. El formulario valida antes tipo (JPG, PNG, WebP) y tamaño (5 MB), muestra una vista
+  previa local (`blob:`) y el estado de cada etapa, y bloquea el envío mientras dura. La imagen se
+  sube después de guardar el evento (al crear hace falta su id); si falla, el evento se conserva y
+  se informa del problema. Salir de la página cancela la subida en curso. Con `withFetch()` Angular
+  no informa del progreso de subida, así que el estado no muestra porcentaje.
+- La CSP de Nginx permite `img-src https://res.cloudinary.com blob:` y
+  `connect-src https://api.cloudinary.com`.
 - Iconos y logotipos simples, preferiblemente en SVG.
 - Estáticos del proyecto en `public/`; no subir imágenes grandes al repositorio.
 

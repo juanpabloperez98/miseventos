@@ -27,6 +27,7 @@ import { EmptyState } from '../../../../shared/components/empty-state/empty-stat
 import { ErrorState } from '../../../../shared/components/error-state/error-state';
 import { Loading } from '../../../../shared/components/loading/loading';
 import { DateRangePipe } from '../../../../shared/pipes/date-range.pipe';
+import { ResponsiveImagePipe } from '../../../../shared/pipes/responsive-image.pipe';
 import { RegistrationsService } from '../../../registrations';
 import { LOADING, type RequestState, toRequestState } from '../../../../shared/utils/request-state';
 import { EventStatusBadge } from '../../components/event-status-badge/event-status-badge';
@@ -59,6 +60,7 @@ const ALREADY_REGISTERED = 'User is already registered to this event';
     Alert,
     Button,
     DateRangePipe,
+    ResponsiveImagePipe,
     EmptyState,
     ErrorState,
     EventStatusBadge,

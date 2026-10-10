@@ -1,18 +1,22 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from app.domain.entities import Event, Registration, Session, Speaker, User
+from app.domain.entities import Event, EventImage, Registration, Session, Speaker, User
 from app.domain.enums import EventStatus
-from app.domain.exceptions import NotFoundError
+from app.domain.exceptions import ImageStorageError, NotFoundError
 from app.domain.ports import (
+    EventImageRepository,
     EventRepository,
     EventSearchCriteria,
     EventVisibility,
+    ImageStorage,
     RegistrationRepository,
     SeedRecord,
     SeedRecordRepository,
     SessionRepository,
+    SignedImageUpload,
     SpeakerRepository,
+    StoredImage,
     UnitOfWork,
     UserRepository,
 )
@@ -205,3 +209,83 @@ class InMemorySeedRecordRepository(SeedRecordRepository):
 
     def save(self, record: SeedRecord) -> None:
         self.records[record.seed_key] = record
+
+
+class InMemoryEventImageRepository(EventImageRepository):
+    """Also attaches the image to the event, like the database relationship does."""
+
+    def __init__(self, events: InMemoryEventRepository | None = None) -> None:
+        self._images: dict[int, EventImage] = {}
+        self._next_id = 1
+        self._events = events
+        self.fail_on_save = False
+
+    def get_by_event(self, event_id: int) -> EventImage | None:
+        return self._images.get(event_id)
+
+    def save(self, image: EventImage) -> EventImage:
+        if self.fail_on_save:
+            raise RuntimeError("database unavailable")
+        current = self._images.get(image.event_id)
+        stored = replace(image, id=current.id if current else self._next_id)
+        if current is None:
+            self._next_id += 1
+        self._images[image.event_id] = stored
+        self._attach(image.event_id, stored)
+        return stored
+
+    def delete_by_event(self, event_id: int) -> None:
+        self._images.pop(event_id, None)
+        self._attach(event_id, None)
+
+    def _attach(self, event_id: int, image: EventImage | None) -> None:
+        event = self._events.get_by_id(event_id) if self._events else None
+        if self._events is not None and event is not None:
+            self._events.update(replace(event, image=image))
+
+
+class FakeImageStorage(ImageStorage):
+    """Records calls; `images` plays the role of the files stored in the image service."""
+
+    def __init__(self) -> None:
+        self.images: dict[str, StoredImage] = {}
+        self.signed: list[tuple[str, tuple[str, ...]]] = []
+        self.deleted: list[str] = []
+        self.fail_get = False
+        self.fail_delete = False
+
+    def sign_upload(self, public_id: str, allowed_formats: tuple[str, ...]) -> SignedImageUpload:
+        self.signed.append((public_id, allowed_formats))
+        return SignedImageUpload(
+            upload_url="https://api.cloudinary.com/v1_1/demo/image/upload",
+            cloud_name="demo",
+            api_key="123",
+            timestamp=1_900_000_000,
+            signature="signature",
+            public_id=public_id,
+            allowed_formats=",".join(allowed_formats),
+        )
+
+    def get_image(self, public_id: str) -> StoredImage | None:
+        if self.fail_get:
+            raise ImageStorageError()
+        return self.images.get(public_id)
+
+    def delete_image(self, public_id: str) -> None:
+        if self.fail_delete:
+            raise ImageStorageError()
+        self.deleted.append(public_id)
+        self.images.pop(public_id, None)
+
+    def upload(self, public_id: str, *, format: str = "jpg", size: int = 2048) -> StoredImage:
+        """Simulates a successful direct upload from the browser."""
+        image = StoredImage(
+            public_id=public_id,
+            secure_url=f"https://res.cloudinary.com/demo/image/upload/v1/{public_id}.{format}",
+            width=1600,
+            height=900,
+            format=format,
+            bytes=size,
+        )
+        self.images[public_id] = image
+        return image

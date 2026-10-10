@@ -17,6 +17,9 @@ SEED_ENABLED_VARIABLES = (
     "SEED_DEMO_DATA_ENABLED",
 )
 
+DEFAULT_EVENT_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+CLOUDINARY_VARIABLES = ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")
+
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSE_VALUES = frozenset({"0", "false", "no", "off", ""})
 
@@ -39,6 +42,12 @@ class Settings:
     jwt_expiration_minutes: int = 60
     cors_origins: tuple[str, ...] = ()
     log_level: str = "INFO"
+    # Cloudinary (optional): without these three values image uploads answer 503.
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = field(default="", repr=False)
+    cloudinary_folder: str = "mis-eventos"
+    event_image_max_bytes: int = DEFAULT_EVENT_IMAGE_MAX_BYTES
 
     def __post_init__(self) -> None:
         if len(self.jwt_secret_key) < MIN_JWT_SECRET_LENGTH:
@@ -51,6 +60,21 @@ class Settings:
             raise ConfigurationError(f"LOG_LEVEL must be one of {sorted(LOG_LEVELS)}")
         if self.environment is Environment.PRODUCTION:
             _ensure_production_jwt_secret(self.jwt_secret_key)
+        credentials = (
+            self.cloudinary_cloud_name,
+            self.cloudinary_api_key,
+            self.cloudinary_api_secret,
+        )
+        if any(credentials) and not all(credentials):
+            raise ConfigurationError(
+                f"Set all of {', '.join(CLOUDINARY_VARIABLES)} or none of them"
+            )
+        if self.event_image_max_bytes <= 0:
+            raise ConfigurationError("EVENT_IMAGE_MAX_BYTES must be greater than zero")
+
+    @property
+    def cloudinary_enabled(self) -> bool:
+        return bool(self.cloudinary_cloud_name)
 
     @property
     def debug(self) -> bool:
@@ -72,6 +96,13 @@ class Settings:
             jwt_expiration_minutes=_parse_int(env, "JWT_EXPIRATION_MINUTES", default=60),
             cors_origins=_parse_list(env.get("CORS_ORIGINS", "")),
             log_level=env.get("LOG_LEVEL", "INFO").upper(),
+            cloudinary_cloud_name=env.get("CLOUDINARY_CLOUD_NAME", "").strip(),
+            cloudinary_api_key=env.get("CLOUDINARY_API_KEY", "").strip(),
+            cloudinary_api_secret=env.get("CLOUDINARY_API_SECRET", "").strip(),
+            cloudinary_folder=env.get("CLOUDINARY_FOLDER", "").strip() or "mis-eventos",
+            event_image_max_bytes=_parse_int(
+                env, "EVENT_IMAGE_MAX_BYTES", default=DEFAULT_EVENT_IMAGE_MAX_BYTES
+            ),
         )
 
 

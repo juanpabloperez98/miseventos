@@ -15,6 +15,7 @@ dependencies = [
     "pyjwt (>=2.15,<3.0)",
     "python-dotenv (>=1.2,<2.0)",
     "gunicorn (>=26.2.0,<27.0.0)",
+    "cloudinary (>=1.46,<2.0)",
 ]
 
 [tool.poetry]
@@ -63,5 +64,5 @@ packages = ["app"]
 disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
-module = ["flask_smorest.*", "flask_cors.*"]
+module = ["flask_smorest.*", "flask_cors.*", "cloudinary.*"]
 ignore_missing_imports = true

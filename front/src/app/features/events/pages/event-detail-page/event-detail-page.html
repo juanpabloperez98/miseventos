@@ -27,6 +27,20 @@
   }
 
   <article class="event" aria-labelledby="event-title">
+    @if (item.image; as image) {
+      @let picture = image.secure_url | responsiveImage: 'cover';
+      <img
+        class="event__cover"
+        [src]="picture.src"
+        [attr.srcset]="picture.srcset"
+        [attr.sizes]="picture.sizes"
+        [width]="picture.width"
+        [height]="picture.height"
+        fetchpriority="high"
+        decoding="async"
+        alt=""
+      />
+    }
     <header class="event__header">
       <app-event-status-badge [status]="item.status" />
       <h1 id="event-title" class="event__title">{{ item.name }}</h1>

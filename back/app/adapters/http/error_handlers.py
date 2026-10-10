@@ -10,8 +10,10 @@ from app.domain.exceptions import (
     AuthorizationError,
     ConflictError,
     DomainError,
+    ExternalServiceError,
     InvalidValueError,
     NotFoundError,
+    ServiceUnavailableError,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,8 @@ STATUS_BY_ERROR: Mapping[type[DomainError], HTTPStatus] = {
     ConflictError: HTTPStatus.CONFLICT,
     AuthenticationError: HTTPStatus.UNAUTHORIZED,
     AuthorizationError: HTTPStatus.FORBIDDEN,
+    ServiceUnavailableError: HTTPStatus.SERVICE_UNAVAILABLE,
+    ExternalServiceError: HTTPStatus.BAD_GATEWAY,
 }
 
 

@@ -28,3 +28,11 @@ class AuthenticationError(DomainError):
 
 class AuthorizationError(DomainError):
     default_message = "You do not have permission to perform this action"
+
+
+class ExternalServiceError(DomainError):
+    default_message = "An external service failed"
+
+
+class ServiceUnavailableError(ExternalServiceError):
+    default_message = "The service is not available"

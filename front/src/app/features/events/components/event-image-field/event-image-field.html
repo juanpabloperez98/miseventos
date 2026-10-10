@@ -1,0 +1,67 @@
+<label class="label" [for]="inputId">Imagen de portada</label>
+
+<div class="preview">
+  @if (previewUrl(); as url) {
+    <img class="preview__image" [src]="url" alt="Vista previa de la nueva imagen" />
+  } @else if (current(); as picture) {
+    <img
+      class="preview__image"
+      [src]="picture.src"
+      [attr.srcset]="picture.srcset"
+      [attr.sizes]="picture.sizes"
+      [width]="picture.width"
+      [height]="picture.height"
+      alt="Imagen actual del evento"
+    />
+  } @else {
+    <p class="preview__empty">
+      {{ removed() ? 'La imagen se quitará al guardar.' : 'Sin imagen' }}
+    </p>
+  }
+</div>
+
+<div class="actions">
+  <input
+    class="file"
+    type="file"
+    [id]="inputId"
+    [accept]="accept"
+    [disabled]="disabled()"
+    [attr.aria-describedby]="inputId + '-hint'"
+    [attr.aria-invalid]="error() ? true : null"
+    (change)="select($event)"
+  />
+  @if (file() || current()) {
+    <button
+      appButton
+      type="button"
+      variant="ghost"
+      size="sm"
+      [disabled]="disabled()"
+      (click)="clear()"
+    >
+      {{ file() ? 'Descartar imagen nueva' : 'Quitar imagen' }}
+    </button>
+  } @else if (removed()) {
+    <button
+      appButton
+      type="button"
+      variant="ghost"
+      size="sm"
+      [disabled]="disabled()"
+      (click)="undoRemoval()"
+    >
+      Conservar imagen actual
+    </button>
+  }
+</div>
+
+<p class="hint" [id]="inputId + '-hint'">
+  Opcional. JPG, PNG o WebP de hasta 5 MB. Se adapta y optimiza automáticamente para cada pantalla.
+</p>
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+@if (status(); as text) {
+  <p class="status" role="status">{{ text }}</p>
+}

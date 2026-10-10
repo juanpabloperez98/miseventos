@@ -135,6 +135,9 @@ cp .env.example .env             # Docker Compose (repository root)
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | yes (Docker) | PostgreSQL container credentials (root `.env`) |
 | `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` | no | Host ports published by Compose (root `.env`, defaults `5432` / `5000`) |
 | `SEED_*` | no | Initial data seeder, see [Seed data](#seed-data). Any `SEED_*_ENABLED=true` with `FLASK_ENV=production` is a configuration error |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | no | Event cover images, see [Event images](#event-images-cloudinary). All three or none; without them image uploads answer 503 |
+| `CLOUDINARY_FOLDER` | no | Folder of the uploads, default `mis-eventos` (lowercase letters, digits, `-`, `_`) |
+| `EVENT_IMAGE_MAX_BYTES` | no | Maximum image size, default `5242880` (5 MB) |
 
 The application refuses to start if a required variable is missing or invalid. Inside Docker
 Compose, `DATABASE_URL` and `TEST_DATABASE_URL` are rebuilt from the `POSTGRES_*` variables so the
@@ -336,6 +339,9 @@ pytest --cov=app --cov-report=html     # report in htmlcov/
 | DELETE | `/api/sessions/{id}` | Bearer (ADMIN, event owner) | Delete the session (204) |
 | POST | `/api/events/{event_id}/registrations` | Bearer | Register the authenticated user to the event (201) |
 | GET | `/api/me/registrations` | Bearer | Events the authenticated user is registered to |
+| POST | `/api/events/{event_id}/images/upload` | Bearer (ADMIN, event owner) | Signed parameters for a direct upload to Cloudinary (body: `filename`, `content_type`, `size`) |
+| POST | `/api/events/{event_id}/images/confirm` | Bearer (ADMIN, event owner) | Verify the upload with Cloudinary and set it as the event cover (201) |
+| DELETE | `/api/events/{event_id}/images` | Bearer (ADMIN, event owner) | Remove the event cover (204) |
 | GET | `/api/speakers` | optional | Read-only speaker catalog ordered by name (`?page=`, `?per_page=` max 100); `id`, `name`, `bio` (no email) |
 
 ### Authentication rules
@@ -414,6 +420,66 @@ authentication → 401, authorization → 403. Unexpected errors return
   uses its own database session and unit of work. `tests/integration/database/
   test_registration_concurrency.py` runs real concurrent transactions to verify it.
 - The list keeps events that were cancelled or completed after the user registered.
+
+### Event images (Cloudinary)
+
+Each event can have **one cover image** (`event_images` table, `event_id` unique, deleted with the
+event). Files go from the browser straight to Cloudinary: the backend only signs the upload and
+verifies it, it never receives nor downloads the file.
+
+1. **Authorize** — `POST /api/events/{id}/images/upload` with `filename`, `content_type` and `size`.
+   The backend checks the user can manage the event (ADMIN or owner, not cancelled/completed),
+   the type (`image/jpeg`, `image/png`, `image/webp`) and the size (`EVENT_IMAGE_MAX_BYTES`). It
+   returns `upload_url`, `cloud_name`, `api_key`, `timestamp`, `signature`, `public_id` and
+   `allowed_formats`. The `public_id` (`<folder>/events/<event_id>/<random>`) and the formats are
+   chosen and signed by the server with the official SDK (`cloudinary.utils.api_sign_request`), so
+   the client cannot change them; Cloudinary rejects signatures older than one hour.
+2. **Upload** — the browser POSTs the file with those fields to `upload_url` (multipart).
+3. **Confirm** — `POST /api/events/{id}/images/confirm` with the `public_id`. The backend checks
+   permissions again and that the id was issued for this event, then reads the image metadata from
+   the Cloudinary Admin API (never from the client): it must exist, be JPEG/PNG/WebP and not exceed
+   the size limit (otherwise it is deleted from Cloudinary and the request answers 422). Only then
+   are `public_id`, `secure_url`, `width`, `height`, `format` and `bytes` stored. Confirming the
+   current image again returns it unchanged (no duplicates).
+
+**Replacement, deletion and failures.** No database transaction stays open during a Cloudinary call:
+the read transaction is closed before verifying the upload, and the event row is locked again only
+to save. Cloudinary deletions always happen *after* the commit:
+
+- Replacing: the new image is saved first; the previous file is deleted only once the new one is
+  committed. If saving fails, the new upload is deleted (compensation) and the old cover is kept.
+- `DELETE /api/events/{id}/images` and deleting a draft event: the row is removed (cascade for the
+  event), then the file. Cancelling a published event keeps its image.
+- If a Cloudinary deletion fails, the database change stands and the file is left orphaned; the
+  warning `event_image_cleanup_failed` logs its `public_id` for a manual cleanup. Each `public_id`
+  is unique and belongs to one event, so deleting it never affects another event.
+- An upload that is never confirmed (e.g. the user leaves during the upload) also stays orphaned in
+  the folder of its event. There is no background job; it can be cleaned from the Cloudinary console.
+
+Cloudinary errors answer **502** and missing configuration **503**, with generic messages: secrets,
+signatures and Cloudinary error details are never returned nor logged.
+
+**Delivery.** The frontend builds the URLs (see `front/README.md`): `f_auto,q_auto,c_fill,g_auto`
+plus the width/height of each use. Cloudinary generates each size on demand and caches it in its
+CDN; only the original is stored.
+
+**Setting up Cloudinary.** Create a (free) account at <https://cloudinary.com>, copy *Cloud name*,
+*API key* and *API secret* from *Settings > API Keys* into `back/.env` and restart the backend
+(`docker compose up -d backend`). Compose passes `back/.env` to the backend only; the frontend
+needs no configuration. The production CSP of Nginx already allows `https://res.cloudinary.com`
+(images) and `https://api.cloudinary.com` (uploads).
+
+**Migration.** `20261009_f0dc0e29f28d_create_event_images_table` only creates `event_images`;
+existing events are untouched and are returned with `"image": null`. Docker applies it on start
+(`alembic upgrade head` in `scripts/start.sh`); manually: `docker compose exec backend alembic
+upgrade head`.
+
+**Tests.** They never call Cloudinary: use cases run with a fake storage, the adapter tests replace
+the SDK calls, and the API tests inject the fake into the container
+(`tests/unit/application/test_event_image_use_cases.py`,
+`tests/unit/infrastructure/test_cloudinary_image_storage.py`,
+`tests/integration/http/test_event_images_api.py`). Run them with `docker compose exec backend
+pytest`.
 
 ### Dates and timezones
 
