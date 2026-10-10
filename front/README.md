@@ -57,16 +57,23 @@ application keeps working.
 
 ### Docker
 
-`front/Dockerfile` is a multi-stage build: it compiles the application (`npm ci` + `npm run build`
-on `node:22.17-alpine`) and serves only `dist/mis-eventos/browser` with `nginx:1.28-alpine` (no
+`front/Dockerfile` is a multi-stage build: it compiles the application (`npm ci` +
+`npm run build -- --configuration <ANGULAR_CONFIGURATION>` on `node:22.17-alpine`) and serves only `dist/mis-eventos/browser` with `nginx:1.28-alpine` (no
 Node.js, sources or `node_modules` in the final image). The Nginx configuration
 (`nginx/default.conf.template`) applies the SPA fallback to `index.html`. The full stack is started
 from the repository root; see the [root README](../README.md).
 
-`npm run build` uses the `production` configuration, so the image always calls the public API
-(`https://tusdatosapi.srbucadevs.store/api`), also when it runs locally. It only works if that API
-allows the origin of the page (for example `http://localhost:4200`) in `CORS_ORIGINS`. To work
-against the local backend, use `npm start`.
+Two build arguments select the API used by the image:
+
+| Build argument          | Default                                | `docker-compose.yml`    | Effect                                                        |
+| ----------------------- | -------------------------------------- | ----------------------- | ------------------------------------------------------------- |
+| `ANGULAR_CONFIGURATION` | `production`                           | `development`           | Angular configuration, and therefore `apiUrl`                 |
+| `API_ORIGIN`            | `https://tusdatosapi.srbucadevs.store` | `http://localhost:5000` | Origin allowed by the CSP `connect-src` (must match `apiUrl`) |
+
+The local Docker stack therefore calls `http://localhost:5000/api`, like `npm start`, and the
+backend must allow `http://localhost:4200` in `CORS_ORIGINS`. A plain `docker build front` keeps
+the production values. The `development` configuration is not minified, has no hashed file names
+and includes source maps.
 
 The container's Nginx also forwards `/api/` to the backend over the Docker network
 (`BACKEND_UPSTREAM`). The current builds do not use that proxy because their `apiUrl` is absolute;
@@ -99,8 +106,9 @@ build (`npm run build` → `dist/mis-eventos/browser/`) is served by Nginx insta
 - Security headers on every location: `Content-Security-Policy`, `X-Content-Type-Options`,
   `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` and, optionally,
   `Strict-Transport-Security`. The CSP allows `img-src 'self' data: blob: https://res.cloudinary.com`
-  for the Cloudinary images, and `connect-src 'self' https://tusdatosapi.srbucadevs.store
-https://api.cloudinary.com` for the production API and the uploads.
+  for the Cloudinary images, and `connect-src 'self' <API_ORIGIN> https://api.cloudinary.com` for
+  the API and the uploads (`API_ORIGIN` is rendered by `envsubst` into a `map` of
+  `default.conf.template`).
 - There is no proxy cache for `/api/` responses.
 
 ## Scripts

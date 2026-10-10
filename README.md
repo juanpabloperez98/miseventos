@@ -28,7 +28,7 @@ calls the API directly (CORS).
 | `docker-compose.yml`                                    | Full stack in **development** mode (default configuration)                 |
 | `docker-compose.prod.yml`                               | **Production**: backend (Gunicorn) + PostgreSQL only                       |
 | `back/Dockerfile`, `back/scripts/start.sh`              | Backend image: migrations → seeder (development only) → server             |
-| `front/Dockerfile`, `front/nginx/default.conf.template` | Optional frontend container: production build served by Nginx (SPA fallback) |
+| `front/Dockerfile`, `front/nginx/default.conf.template` | Optional frontend container: Angular build served by Nginx (SPA fallback)    |
 
 ## Requirements
 
@@ -81,10 +81,9 @@ docker compose ps        # the three services must show as (healthy)
 
 In development the backend mounts `./back` and uses the Flask server with hot reload; on start-up it
 applies the migrations and runs the idempotent seeder (it never duplicates data). The frontend
-container always serves the **production** build through Nginx, so it calls the public API
-(`https://tusdatosapi.srbucadevs.store/api`), not the local backend; it only works if that API
-allows the `http://localhost:4200` origin in its `CORS_ORIGINS`. To work against the local backend
-use `npm start` (next section).
+container is built with the Angular `development` configuration (build args in
+`docker-compose.yml`), so it calls the local backend at `http://localhost:5000/api`, which must
+allow `http://localhost:4200` in `CORS_ORIGINS`. For hot reload use `npm start` (next section).
 
 ### Production
 
@@ -210,10 +209,12 @@ Pending for a real deployment: domain, certificate and the proxy or load balance
 ### Frontend headers
 
 The Nginx of the frontend container (not the host Nginx of the VPS) sends `Content-Security-Policy`
-(`script-src 'self'`, `connect-src 'self' https://tusdatosapi.srbucadevs.store
-https://api.cloudinary.com`, `frame-ancestors 'none'`; `style-src` allows inline styles because Angular inserts the component
+(`script-src 'self'`, `connect-src 'self' <API_ORIGIN> https://api.cloudinary.com`,
+`frame-ancestors 'none'`; `style-src` allows inline styles because Angular inserts the component
 styles), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`
-(`front/nginx/security-headers.conf`). The production build does not use Angular's critical CSS
+(`front/nginx/security-headers.conf`). `<API_ORIGIN>` is the `API_ORIGIN` build argument of
+`front/Dockerfile`: `http://localhost:5000` in `docker-compose.yml`, and
+`https://tusdatosapi.srbucadevs.store` by default. The production build does not use Angular's critical CSS
 inlining, which requires an inline `onload` handler that is incompatible with this CSP.
 
 ## Frontend in development mode (hot reload)
@@ -230,8 +231,8 @@ npm start               # http://localhost:4200 → calls http://localhost:5000/
 `npm start` uses port 4200, the same as the `frontend` container: if that container is running,
 stop it with `docker compose stop frontend` or change `FRONTEND_HOST_PORT` in `.env`.
 
-To start **only the dockerized frontend**: `docker compose up -d --build frontend`. It serves the
-production build, which calls the public API (see above); if the API cannot be reached, the
+To start **only the dockerized frontend**: `docker compose up -d --build frontend`. It calls the
+local backend at `http://localhost:5000/api` (see above); if the backend is not running, the
 interface shows its error state with a retry option.
 
 ## Tests

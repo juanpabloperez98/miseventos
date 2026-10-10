@@ -49,6 +49,10 @@ services:
   frontend:
     build:
       context: ./front
+      args:
+        # Development bundle (apiUrl http://localhost:5000/api) and its origin in the CSP.
+        ANGULAR_CONFIGURATION: development
+        API_ORIGIN: http://localhost:5000
     environment:
       # Target of the Nginx /api/ reverse proxy (service name + internal port).
       BACKEND_UPSTREAM: http://backend:5000

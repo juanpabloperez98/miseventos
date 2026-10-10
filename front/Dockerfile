@@ -7,11 +7,17 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
+ARG ANGULAR_CONFIGURATION=production
+
 COPY . .
-RUN npm run build
+RUN npm run build -- --configuration "${ANGULAR_CONFIGURATION}"
 
 FROM nginx:1.28-alpine AS runtime
 
+# Origin of the apiUrl compiled into the bundle; allowed by the CSP connect-src.
+ARG API_ORIGIN=https://tusdatosapi.srbucadevs.store
+
+ENV API_ORIGIN=${API_ORIGIN}
 ENV BACKEND_UPSTREAM=http://backend:5000
 ENV HTTPS_REDIRECT=0 \
     HSTS_HEADER=""
