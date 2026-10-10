@@ -4,31 +4,35 @@ Event management platform: a Flask REST API ([`back/`](back/README.md)), an Angu
 ([`front/`](front/README.md)) and PostgreSQL, orchestrated with Docker Compose.
 
 ```text
-                  browser
-                    │  http://localhost:4200
-                    ▼
-        ┌──────────────────────────┐
-        │ frontend (Nginx)         │  compiled Angular + proxy /api/ → backend:5000
-        └────────────┬─────────────┘
-                     │  Docker network "miseventos"
-        ┌────────────▼─────────────┐
-        │ backend (Flask)          │  dev: Flask --debug · prod: Gunicorn
-        └────────────┬─────────────┘
-        ┌────────────▼─────────────┐
-        │ postgres:17-alpine       │  named volume postgres_data
-        └──────────────────────────┘
+Development (docker-compose.yml)                 Production (VPS)
+
+ browser ─ http://localhost:4200                  browser ─ https://tusdatos.srbucadevs.store
+    │      (npm start, apiUrl                        │      (static build served by the host Nginx)
+    │       http://localhost:5000/api)               │
+    ▼                                                ▼  https://tusdatosapi.srbucadevs.store/api
+ backend (Flask --debug) :5000                    host Nginx ─► 127.0.0.1:5001
+    │  Docker network "miseventos"                   ▼
+    ▼                                             backend (Gunicorn), docker-compose.prod.yml
+ postgres:17-alpine :5432                            │  internal network "database"
+                                                     ▼
+                                                  postgres:17-alpine (no published port)
 ```
+
+Angular picks the API URL at build time: `http://localhost:5000/api` for the `development`
+configuration (`npm start`) and `https://tusdatosapi.srbucadevs.store/api` for `production`
+(`npm run build`). The frontend and the API are published on different domains, so the browser
+calls the API directly (CORS).
 
 | File                                                    | Contents                                                                   |
 | ------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `docker-compose.yml`                                    | Full stack in **development** mode (default configuration)                 |
 | `docker-compose.prod.yml`                               | **Production**: backend (Gunicorn) + PostgreSQL only                       |
 | `back/Dockerfile`, `back/scripts/start.sh`              | Backend image: migrations → seeder (development only) → server             |
-| `front/Dockerfile`, `front/nginx/default.conf.template` | Angular built with Node and served by Nginx (SPA fallback and `/api/` proxy) |
+| `front/Dockerfile`, `front/nginx/default.conf.template` | Optional frontend container: production build served by Nginx (SPA fallback) |
 
 ## Requirements
 
-- Docker Engine with Docker Compose v2.24 or later (the overrides use `!reset`).
+- Docker Engine with Docker Compose v2.
 - Only for frontend development outside Docker: Node.js 22 (see [`front/README.md`](front/README.md)).
 
 ## Initial setup
@@ -54,10 +58,9 @@ The backend variables (`FLASK_ENV`, `JWT_SECRET_KEY`, `JWT_EXPIRATION_MINUTES`, 
 `back/.env.example` and in [`back/README.md`](back/README.md#environment-variables).
 
 **The frontend has no secrets.** Its only setting is `apiUrl`, which is fixed at build time
-(`front/src/environments/`) and is public: in production it is `/api` (a relative path to the Nginx
-proxy). Changing container variables does not modify the bundle that is already built; the only
-variable of the frontend container is `BACKEND_UPSTREAM`, the target of the proxy inside the Docker
-network (`http://backend:5000` by default).
+(`front/src/environments/`) and is public: `http://localhost:5000/api` in development and
+`https://tusdatosapi.srbucadevs.store/api` in production. Changing container variables does not
+modify the bundle that is already built.
 
 ## Running the full stack
 
@@ -78,15 +81,20 @@ docker compose ps        # the three services must show as (healthy)
 
 In development the backend mounts `./back` and uses the Flask server with hot reload; on start-up it
 applies the migrations and runs the idempotent seeder (it never duplicates data). The frontend
-container always serves the optimized build through Nginx; for hot reload use `npm start` (next
-section).
+container always serves the **production** build through Nginx, so it calls the public API
+(`https://tusdatosapi.srbucadevs.store/api`), not the local backend; it only works if that API
+allows the `http://localhost:4200` origin in its `CORS_ORIGINS`. To work against the local backend
+use `npm start` (next section).
 
 ### Production
 
-`docker-compose.prod.yml` is standalone (it is **not** applied on top of `docker-compose.yml`) and
-only runs the backend with Gunicorn and PostgreSQL. The frontend is not part of it: its static build
-is served by an Nginx installed on the server, which forwards `/api/` to `127.0.0.1:5001` (server
-configuration outside this repository).
+`docker-compose.prod.yml` is standalone and only runs the backend with Gunicorn and PostgreSQL.
+Never combine it with `docker-compose.yml` (`-f docker-compose.yml -f docker-compose.prod.yml`):
+the development ports would be added, publishing the backend on `0.0.0.0:5000` and PostgreSQL on
+`0.0.0.0:5432`, plus the frontend container. The frontend is not part of the production stack: its
+static build is served by an Nginx installed on the server (`https://tusdatos.srbucadevs.store`),
+and the API domain (`https://tusdatosapi.srbucadevs.store`) is forwarded by that Nginx to
+`127.0.0.1:5001` (server configuration outside this repository).
 
 Configuration on the server (files ignored by Git):
 
@@ -100,7 +108,8 @@ Configuration on the server (files ignored by Git):
   (`python3 -c "import secrets; print(secrets.token_urlsafe(32))"`).
 - `docker-compose.prod.yml` sets `FLASK_ENV=production`, `DATABASE_URL` and `SEED_*_ENABLED=false`,
   overriding whatever `back/.env` says.
-- If the frontend is served on the same domain as `/api/`, leave `CORS_ORIGINS` empty.
+- The frontend (`https://tusdatos.srbucadevs.store`) and the API are on different domains, so
+  `CORS_ORIGINS` must include the frontend origin.
 
 ```bash
 docker compose -f docker-compose.prod.yml config --quiet     # validates the file and the variables
@@ -133,7 +142,7 @@ Differences from development:
 | `FLASK_ENV`     | The value in `back/.env`                                 | `production` (forced by `docker-compose.prod.yml`)                                                     |
 | Seeder          | Runs on every start (idempotent)                         | Forbidden: `SEED_*_ENABLED` forced to `false`, and the backend does not start if any of them is `true` |
 | `JWT_SECRET_KEY`| At least 32 characters                                   | Also: no example placeholders and at least 16 distinct characters, or the backend does not start       |
-| Published ports | 4200, 5000, 5432                                         | Only 5000 on `127.0.0.1` (for the host Nginx); PostgreSQL is only reachable on an internal network     |
+| Published ports | 4200, 5000, 5432                                         | Only 5001 on `127.0.0.1` (for the host Nginx); PostgreSQL is only reachable on an internal network     |
 
 See [Production security](#production-security) before a real deployment.
 
@@ -200,8 +209,9 @@ Pending for a real deployment: domain, certificate and the proxy or load balance
 
 ### Frontend headers
 
-Nginx sends `Content-Security-Policy` (`script-src 'self'`, `connect-src 'self'`,
-`frame-ancestors 'none'`; `style-src` allows inline styles because Angular inserts the component
+The Nginx of the frontend container (not the host Nginx of the VPS) sends `Content-Security-Policy`
+(`script-src 'self'`, `connect-src 'self' https://tusdatosapi.srbucadevs.store
+https://api.cloudinary.com`, `frame-ancestors 'none'`; `style-src` allows inline styles because Angular inserts the component
 styles), `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`
 (`front/nginx/security-headers.conf`). The production build does not use Angular's critical CSS
 inlining, which requires an inline `onload` handler that is incompatible with this CSP.
@@ -220,9 +230,9 @@ npm start               # http://localhost:4200 → calls http://localhost:5000/
 `npm start` uses port 4200, the same as the `frontend` container: if that container is running,
 stop it with `docker compose stop frontend` or change `FRONTEND_HOST_PORT` in `.env`.
 
-To start **only the dockerized frontend**: `docker compose up -d --build frontend`. Nginx serves the
-application even if the backend is not available; calls to `/api/` return `502` until it is, and
-the interface shows its error state with a retry option.
+To start **only the dockerized frontend**: `docker compose up -d --build frontend`. It serves the
+production build, which calls the public API (see above); if the API cannot be reached, the
+interface shows its error state with a retry option.
 
 ## Tests
 
@@ -240,6 +250,7 @@ docker compose exec backend alembic check                  # models and migratio
 cd front
 npm run lint
 npm run test:ci
+npm run test:coverage   # report in front/coverage/mis-eventos/index.html
 npm run build
 ```
 
@@ -281,8 +292,9 @@ connections on the following requests. The frontend depends on no other service.
 
 ## Nginx `/api/` proxy
 
-- The browser always calls relative paths (`/api/...`), so it needs neither CORS nor the `backend`
-  name, which only exists inside the Docker network.
+- Applies only to the frontend container. The current builds do not use it: their `apiUrl` is an
+  absolute URL. It is kept for a build whose `apiUrl` is the relative path `/api`, which would need
+  neither CORS nor the `backend` name (that name only exists inside the Docker network).
 - Nginx forwards the URI unchanged (backend routes already start with `/api`), together with the
   method, the body, the `Authorization` header and the `X-Forwarded-*` headers.
 - The backend name is resolved on every request through Docker's internal DNS, so Nginx starts even

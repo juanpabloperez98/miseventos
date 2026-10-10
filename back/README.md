@@ -5,7 +5,8 @@ attendee registrations. Built with Flask on a hexagonal (ports and adapters) arc
 
 > **Status.** Foundation (architecture, persistence, security, Docker, tests), authentication and
 > **event management** (CRUD, status workflow, ownership, search and pagination), **session
-> management** and **attendee registration** are implemented. Speaker management is next (see
+> management**, **attendee registration**, a read-only **speaker catalog** and **event cover
+> images** (Cloudinary) are implemented. Speaker management endpoints are not (see
 > [Roadmap](#roadmap)).
 
 ## Tech stack
@@ -38,10 +39,10 @@ Dependencies always point inward, towards the domain:
            domain  (entities, value objects, enums, exceptions, ports)
 ```
 
-- **Domain** — pure Python. Entities (`User`, `Event`, `Session`, `Speaker`, `Registration`),
-  value objects (`Email`, `TimeRange`, `PageRequest`/`Page`), enums, domain exceptions and the
-  **ports** (abstract repositories, `UnitOfWork`, `PasswordHasher`, `TokenService`). It imports no
-  framework at all.
+- **Domain** — pure Python. Entities (`User`, `Event`, `EventImage`, `Session`, `Speaker`,
+  `Registration`), value objects (`Email`, `TimeRange`, `PageRequest`/`Page`), enums, domain
+  exceptions and the **ports** (abstract repositories, `UnitOfWork`, `PasswordHasher`,
+  `TokenService`, `ImageStorage`). It imports no framework at all.
 - **Application** — use cases orchestrate the domain through ports only. They never touch Flask,
   SQLAlchemy or PyJWT. Authorization (RBAC) lives here as `AuthorizationService`.
 - **Infrastructure** — concrete adapters for the ports: SQLAlchemy models and repositories,
@@ -59,25 +60,29 @@ forbidden module, if any module has a circular import, or if an adapter stops im
 ```text
 back/
 ├── app/
-│   ├── _telemetry/            # TELEMETRY_NAMESPACE (required by the test)
+│   ├── _telemetry/            # TELEMETRY_NAMESPACE (required by the technical test brief)
 │   ├── domain/
-│   │   ├── entities/          # User, Event, Session, Speaker, Registration
+│   │   ├── entities/          # User, Event, EventImage, Session, Speaker, Registration
 │   │   ├── value_objects/     # Email, TimeRange, PageRequest, Page
 │   │   ├── enums/             # UserRole, EventStatus, Permission
 │   │   ├── exceptions/        # DomainError hierarchy
-│   │   └── ports/             # repository / security / unit-of-work abstractions
+│   │   └── ports/             # repository / security / unit-of-work / image storage abstractions
 │   ├── application/
 │   │   ├── dto/               # commands, queries and output DTOs
-│   │   ├── services/          # AuthorizationService (RBAC), EventAccessPolicy (ownership)
-│   │   └── use_cases/         # auth/, events/, sessions/, registrations/, seeding/
+│   │   ├── services/          # AuthorizationService (RBAC), EventAccessPolicy (ownership),
+│   │   │                      # EventImagePolicy
+│   │   └── use_cases/         # auth/, events/, event_images/, sessions/, registrations/,
+│   │                          # speakers/, seeding/
 │   ├── infrastructure/
 │   │   ├── config/            # Settings loaded from environment variables
 │   │   ├── database/          # base, session, models/, repositories/, unit_of_work
+│   │   ├── images/            # CloudinaryImageStorage, DisabledImageStorage
 │   │   ├── security/          # JwtTokenService, Sha256PasswordHasher
 │   │   └── logging_config.py  # structured JSON logging
 │   ├── adapters/cli/          # flask seed-initial-data command
 │   ├── adapters/http/
-│   │   ├── routes/            # health, auth, events blueprints
+│   │   ├── routes/            # health, auth, events, event_images, sessions, registrations,
+│   │   │                      # speakers blueprints
 │   │   ├── schemas/           # marshmallow request/response schemas
 │   │   ├── middleware/        # authentication, authorization, request logging
 │   │   ├── error_handlers.py  # domain exception -> HTTP status mapping
@@ -138,6 +143,7 @@ cp .env.example .env             # Docker Compose (repository root)
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | no | Event cover images, see [Event images](#event-images-cloudinary). All three or none; without them image uploads answer 503 |
 | `CLOUDINARY_FOLDER` | no | Folder of the uploads, default `mis-eventos` (lowercase letters, digits, `-`, `_`) |
 | `EVENT_IMAGE_MAX_BYTES` | no | Maximum image size, default `5242880` (5 MB) |
+| `GUNICORN_WORKERS` / `GUNICORN_TIMEOUT` | no | Production only (`scripts/start.sh`): Gunicorn workers and worker timeout in seconds, defaults `2` / `30` |
 
 The application refuses to start if a required variable is missing or invalid. Inside Docker
 Compose, `DATABASE_URL` and `TEST_DATABASE_URL` are rebuilt from the `POSTGRES_*` variables so the
@@ -181,7 +187,8 @@ All `docker compose` commands below are run from the repository root.
 Useful commands:
 
 ```bash
-docker compose exec backend pytest                  # run the test suite
+docker compose exec backend pytest tests/unit       # unit tests (no database)
+docker compose exec backend pytest                  # unit + integration (uses TEST_DATABASE_URL)
 docker compose exec backend pytest --cov=app        # with coverage
 docker compose exec backend alembic upgrade head    # apply migrations
 docker compose exec backend ruff check .            # lint
@@ -305,10 +312,17 @@ always taken from `DATABASE_URL`; `alembic.ini` contains no credentials.
 ## Tests and coverage
 
 ```bash
-pytest
+pytest tests/unit                      # unit tests only, no database needed
+pytest tests/integration               # integration tests (most need TEST_DATABASE_URL)
+pytest                                 # both
 pytest --cov=app
 pytest --cov=app --cov-report=html     # report in htmlcov/
 ```
+
+Inside the development container `TEST_DATABASE_URL` is always set by `docker-compose.yml`
+(`<POSTGRES_DB>_test`), so `pytest` there runs both suites and creates that database if it does not
+exist. Without the variable, the tests that need the database are reported as skipped, and the
+coverage then does not include them.
 
 - `tests/unit` needs no database: domain rules, use cases with in-memory fakes, JWT, password
   hashing, settings and architecture rules.
@@ -515,7 +529,7 @@ POST /api/speakers, PUT/DELETE /api/speakers/{id}
   dedicated KDF such as bcrypt or argon2 would be stronger. The `PasswordHasher` port makes that a
   one-class swap.
 - **Registration concurrency.** `EventRepository.get_by_id_for_update` issues
-  `SELECT … FOR UPDATE` on the event row. The registration use case will run in one transaction:
+  `SELECT … FOR UPDATE` on the event row. The registration use case runs in one transaction:
   lock the event → count registrations → `Event.ensure_can_accept_registration()` → insert →
   commit. Concurrent requests for the last seat are serialized by the row lock, and the
   `UNIQUE(user_id, event_id)` constraint is the final guard against duplicates (mapped to

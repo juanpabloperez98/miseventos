@@ -60,9 +60,17 @@ application keeps working.
 `front/Dockerfile` is a multi-stage build: it compiles the application (`npm ci` + `npm run build`
 on `node:22.17-alpine`) and serves only `dist/mis-eventos/browser` with `nginx:1.28-alpine` (no
 Node.js, sources or `node_modules` in the final image). The Nginx configuration
-(`nginx/default.conf.template`) applies the SPA fallback to `index.html` and forwards `/api/` to the
-backend over the Docker network, so the production build (`apiUrl: '/api'`) does not need CORS.
-The full stack is started from the repository root; see the [root README](../README.md).
+(`nginx/default.conf.template`) applies the SPA fallback to `index.html`. The full stack is started
+from the repository root; see the [root README](../README.md).
+
+`npm run build` uses the `production` configuration, so the image always calls the public API
+(`https://tusdatosapi.srbucadevs.store/api`), also when it runs locally. It only works if that API
+allows the origin of the page (for example `http://localhost:4200`) in `CORS_ORIGINS`. To work
+against the local backend, use `npm start`.
+
+The container's Nginx also forwards `/api/` to the backend over the Docker network
+(`BACKEND_UPSTREAM`). The current builds do not use that proxy because their `apiUrl` is absolute;
+it is kept for a build whose `apiUrl` is the relative path `/api`.
 
 ```bash
 docker compose up -d --build frontend    # from the repository root: only the frontend, at http://localhost:4200
@@ -91,22 +99,24 @@ build (`npm run build` → `dist/mis-eventos/browser/`) is served by Nginx insta
 - Security headers on every location: `Content-Security-Policy`, `X-Content-Type-Options`,
   `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` and, optionally,
   `Strict-Transport-Security`. The CSP allows `img-src 'self' data: blob: https://res.cloudinary.com`
-  and `connect-src 'self' https://api.cloudinary.com` for the Cloudinary images and uploads.
+  for the Cloudinary images, and `connect-src 'self' https://tusdatosapi.srbucadevs.store
+https://api.cloudinary.com` for the production API and the uploads.
 - There is no proxy cache for `/api/` responses.
 
 ## Scripts
 
-| Command                | Description                                         |
-| ---------------------- | --------------------------------------------------- |
-| `npm start`            | Development server with hot reload.                 |
-| `npm run build`        | Production build in `dist/mis-eventos/browser/`.    |
-| `npm run build:dev`    | Development build (not minified, with source maps). |
-| `npm run watch`        | Development build in watch mode.                    |
-| `npm test`             | Unit tests in watch mode (opens Chrome).            |
-| `npm run test:ci`      | Unit tests, run once in headless Chrome (for CI).   |
-| `npm run lint`         | Static analysis with ESLint (`ng lint`).            |
-| `npm run format`       | Formats the project with Prettier.                  |
-| `npm run format:check` | Checks the formatting without modifying files.      |
+| Command                 | Description                                                           |
+| ----------------------- | --------------------------------------------------------------------- |
+| `npm start`             | Development server with hot reload.                                   |
+| `npm run build`         | Production build in `dist/mis-eventos/browser/`.                      |
+| `npm run build:dev`     | Development build (not minified, with source maps).                   |
+| `npm run watch`         | Development build in watch mode.                                      |
+| `npm test`              | Unit tests in watch mode (opens Chrome).                              |
+| `npm run test:ci`       | Unit tests, run once in headless Chrome (for CI).                     |
+| `npm run test:coverage` | Same as `test:ci`, plus a coverage report in `coverage/mis-eventos/`. |
+| `npm run lint`          | Static analysis with ESLint (`ng lint`).                              |
+| `npm run format`        | Formats the project with Prettier.                                    |
+| `npm run format:check`  | Checks the formatting without modifying files.                        |
 
 ## Folder structure
 
@@ -428,14 +438,20 @@ HTTP cache, the Cloudinary CDN or any backend cache (the backend has none).
 
 The URL is defined with the official Angular CLI environments mechanism:
 
-| File                                          | Used by                          | `apiUrl`                    |
-| --------------------------------------------- | -------------------------------- | --------------------------- |
-| `src/environments/environment.development.ts` | `npm start`, `npm run build:dev` | `http://localhost:5000/api` |
-| `src/environments/environment.ts`             | `npm run build` (production)     | `/api` (same origin)        |
+| File                                          | Used by                          | `apiUrl`                                   |
+| --------------------------------------------- | -------------------------------- | ------------------------------------------ |
+| `src/environments/environment.development.ts` | `npm start`, `npm run build:dev` | `http://localhost:5000/api`                |
+| `src/environments/environment.ts`             | `npm run build` (production)     | `https://tusdatosapi.srbucadevs.store/api` |
 
-`apiUrl` includes the `/api` prefix used by every backend route. Production uses a relative path,
-meant to serve the frontend and the API under the same domain through a reverse proxy; if the API
-is published on another domain, changing the value in `environment.ts` is enough.
+`ng build` defaults to the `production` configuration, which uses `environment.ts` as it is. The
+`development` configuration (default of `ng serve`, also used by `npm run build:dev` and
+`npm run watch`) replaces it with `environment.development.ts` through `fileReplacements` in
+`angular.json`.
+
+`apiUrl` includes the `/api` prefix used by every backend route. In production the frontend
+(`https://tusdatos.srbucadevs.store`, static files served by the server's Nginx) and the API are on
+different domains, so the browser calls the API directly and the backend must allow the frontend
+origin in `CORS_ORIGINS`.
 
 The value is exposed to the application through the `API_URL` token
 (`core/config/api-url.token.ts`), which tests can override with
@@ -651,15 +667,19 @@ The `*.spec.ts` files cover:
   `cloudinary-image` (transformations, variants), `date-time` and the date pipes, and the favicon
   declared in `index.html` (`src/index.spec.ts`).
 
-Test coverage is not measured (no script runs `--code-coverage`), and there are no end-to-end
-tests. Validation commands:
+There are no end-to-end tests. Validation commands:
 
 ```bash
 npm run test:ci        # unit tests
+npm run test:coverage  # unit tests + coverage (karma-coverage)
 npm run lint           # ESLint
 npm run format:check   # Prettier
 npm run build          # production build (fails if a budget is exceeded)
 ```
+
+`npm run test:coverage` runs `ng test --watch=false --browsers=ChromeHeadless --code-coverage`. It
+prints a summary in the console and writes the HTML report to `coverage/mis-eventos/index.html`
+(ignored by Git).
 
 On Windows with `core.autocrlf=true`, Git checks files out with CRLF line endings while Prettier
 expects LF, so `npm run format:check` can report files whose only difference is the line ending.
@@ -678,7 +698,7 @@ Not implemented yet, or possible improvements:
 - A default cover (and load error fallback) on the event detail page, like the cards.
 - Upload progress percentage (it would require the XHR backend of `HttpClient` instead of
   `withFetch()`).
-- Measured test coverage, end-to-end tests and a CI pipeline running the validation commands.
+- End-to-end tests and a CI pipeline running the validation commands.
 - A `.gitattributes` file enforcing LF line endings, so `format:check` behaves the same on every
   platform.
 - A visual check of the responsive layout and a real upload to a Cloudinary account.

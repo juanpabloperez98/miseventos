@@ -1,5 +1,6 @@
-# Development stack (default): docker compose up --build
-# Production overrides:         docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Development stack only: docker compose up --build
+# Production uses docker-compose.prod.yml on its own (docker compose -f docker-compose.prod.yml ...).
+# Never combine both files: this one publishes ports on every interface.
 name: miseventos
 
 services:
