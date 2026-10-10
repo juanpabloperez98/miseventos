@@ -16,7 +16,11 @@ import { provideSessionExpiryRedirect } from '../app/core/auth/session-expiry';
 import { TokenStorage } from '../app/core/auth/token-storage';
 import { API_URL } from '../app/core/config/api-url.token';
 import { authInterceptor } from '../app/core/interceptors/auth.interceptor';
-import { type EventModel, type EventPage } from '../app/features/events/models/event.model';
+import {
+  type EventImage,
+  type EventModel,
+  type EventPage,
+} from '../app/features/events/models/event.model';
 import { type EventSession } from '../app/features/events/models/session.model';
 
 /** Placeholder routed component for destinations a test only navigates to. */
@@ -122,6 +126,30 @@ export function fillDateTime(container: Element, value: string): void {
   choose(hour, String(hours % 12 === 0 ? 12 : hours % 12));
   choose(minute, String(minutes).padStart(2, '0'));
   choose(period, hours < 12 ? 'AM' : 'PM');
+}
+
+export function buildImage(overrides: Partial<EventImage> = {}): EventImage {
+  return {
+    public_id: 'mis-eventos/events/10/0123456789abcdef0123456789abcdef',
+    secure_url:
+      'https://res.cloudinary.com/demo/image/upload/v1/mis-eventos/events/10/0123456789abcdef0123456789abcdef.jpg',
+    width: 1600,
+    height: 900,
+    format: 'jpg',
+    ...overrides,
+  };
+}
+
+export function imageFile(name = 'cover.jpg', type = 'image/jpeg', size = 1024): File {
+  return new File([new Uint8Array(size)], name, { type });
+}
+
+/** Chooses `file` in a file input like a user would. */
+export function selectFile(input: HTMLInputElement, file: File): void {
+  const transfer = new DataTransfer();
+  transfer.items.add(file);
+  input.files = transfer.files;
+  input.dispatchEvent(new Event('change'));
 }
 
 export function textOf(element: Element | null | undefined): string {

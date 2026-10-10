@@ -21,6 +21,14 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
 
+  &__cover {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
   &__header {
     display: flex;
     flex-direction: column;

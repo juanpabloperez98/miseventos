@@ -64,6 +64,14 @@
     />
   }
 
+  <app-event-image-field
+    class="form__full"
+    [image]="event()?.image ?? null"
+    [disabled]="submitting()"
+    [status]="imageStatus()"
+    (selectionChange)="imageChange.emit($event)"
+  />
+
   <div class="form__actions form__full">
     <button appButton type="button" variant="ghost" (click)="cancelled.emit()">Cancelar</button>
     <button appButton type="submit" [loading]="submitting()" [disabled]="submitting()">

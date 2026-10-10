@@ -152,3 +152,55 @@ def test_development_allows_seeders() -> None:
     settings = Settings.from_env({**VALID_ENV, "SEED_ADMIN_ENABLED": "true"})
 
     assert settings.environment is Environment.DEVELOPMENT
+
+
+CLOUDINARY_ENV = {
+    "CLOUDINARY_CLOUD_NAME": "demo",
+    "CLOUDINARY_API_KEY": "123456789",
+    "CLOUDINARY_API_SECRET": "cloudinary-secret-value",
+}
+
+
+def test_cloudinary_is_disabled_by_default() -> None:
+    settings = Settings.from_env(VALID_ENV)
+
+    assert not settings.cloudinary_enabled
+    assert settings.cloudinary_folder == "mis-eventos"
+    assert settings.event_image_max_bytes == 5 * 1024 * 1024
+
+
+def test_reads_the_cloudinary_configuration() -> None:
+    settings = Settings.from_env(
+        {
+            **VALID_ENV,
+            **CLOUDINARY_ENV,
+            "CLOUDINARY_FOLDER": "staging",
+            "EVENT_IMAGE_MAX_BYTES": "1000",
+        }
+    )
+
+    assert settings.cloudinary_enabled
+    assert settings.cloudinary_cloud_name == "demo"
+    assert settings.cloudinary_api_key == "123456789"
+    assert settings.cloudinary_folder == "staging"
+    assert settings.event_image_max_bytes == 1000
+
+
+@pytest.mark.parametrize("missing", sorted(CLOUDINARY_ENV))
+def test_rejects_a_partial_cloudinary_configuration(missing: str) -> None:
+    env = {**VALID_ENV, **CLOUDINARY_ENV}
+    del env[missing]
+
+    with pytest.raises(ConfigurationError, match="CLOUDINARY_API_SECRET"):
+        Settings.from_env(env)
+
+
+def test_rejects_a_non_positive_image_size_limit() -> None:
+    with pytest.raises(ConfigurationError, match="EVENT_IMAGE_MAX_BYTES"):
+        Settings.from_env({**VALID_ENV, "EVENT_IMAGE_MAX_BYTES": "0"})
+
+
+def test_repr_does_not_leak_the_cloudinary_secret() -> None:
+    settings = Settings.from_env({**VALID_ENV, **CLOUDINARY_ENV})
+
+    assert "cloudinary-secret-value" not in repr(settings)

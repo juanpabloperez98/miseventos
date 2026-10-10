@@ -23,6 +23,13 @@ import { Loading } from '../../../../shared/components/loading/loading';
 import { LOADING, toRequestState } from '../../../../shared/utils/request-state';
 import { EventForm } from '../../components/event-form/event-form';
 import { type EventUpdatePayload, isEventEditable } from '../../models/event.model';
+import {
+  describeImageProgress,
+  EventImageError,
+  type EventImageSelection,
+  EventImagesService,
+  NO_IMAGE_CHANGE,
+} from '../../services/event-images.service';
 import { EventsService } from '../../services/events.service';
 
 /**
@@ -44,6 +51,7 @@ export class EventEditPage {
   private readonly events = inject(EventsService);
   private readonly authorization = inject(AuthorizationService);
   private readonly flashMessages = inject(FlashMessageService);
+  private readonly images = inject(EventImagesService);
 
   private readonly reloads = signal(0);
 
@@ -54,6 +62,8 @@ export class EventEditPage {
     { initialValue: LOADING },
   );
 
+  protected readonly image = signal<EventImageSelection>(NO_IMAGE_CHANGE);
+  protected readonly imageStatus = signal<string | null>(null);
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly fieldErrors = signal<FieldErrors>({});
@@ -80,6 +90,9 @@ export class EventEditPage {
   }
 
   protected update(payload: EventUpdatePayload): void {
+    if (this.submitting()) {
+      return;
+    }
     const id = this.id();
     this.submitting.set(true);
     this.error.set(null);
@@ -87,15 +100,36 @@ export class EventEditPage {
       .update(id, payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
-          this.flashMessages.set('success', 'Los cambios se guardaron correctamente.');
-          void this.router.navigate(['/events', id]);
-        },
+        next: () => this.applyImage(id),
         error: (error: unknown) => {
           const apiError = toApiError(error);
           this.submitting.set(false);
           this.fieldErrors.set(apiError.fieldErrors);
           this.error.set(describeApiError(apiError));
+        },
+      });
+  }
+
+  /**
+   * Applies the image change once the event is saved. The backend keeps the previous image until
+   * the new one is confirmed. If it fails the user stays here to try again.
+   */
+  private applyImage(id: number): void {
+    const finish = () => {
+      this.flashMessages.set('success', 'Los cambios se guardaron correctamente.');
+      void this.router.navigate(['/events', id]);
+    };
+    this.images
+      .apply(id, this.image())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (progress) => this.imageStatus.set(describeImageProgress(progress)),
+        complete: finish,
+        error: (error: unknown) => {
+          this.submitting.set(false);
+          this.imageStatus.set(null);
+          const reason = error instanceof EventImageError ? error.message : 'Error inesperado.';
+          this.error.set(`Los datos del evento se guardaron, pero la imagen no: ${reason}`);
         },
       });
   }

@@ -1,4 +1,9 @@
-from app.domain.exceptions.base import AuthenticationError, ConflictError
+from app.domain.exceptions.base import (
+    AuthenticationError,
+    ConflictError,
+    ExternalServiceError,
+    ServiceUnavailableError,
+)
 
 
 class EmailAlreadyRegisteredError(ConflictError):
@@ -39,3 +44,12 @@ class InvalidCredentialsError(AuthenticationError):
 
 class InvalidTokenError(AuthenticationError):
     default_message = "Invalid or expired token"
+
+
+# Messages never include credentials nor details of the image service.
+class ImageStorageError(ExternalServiceError):
+    default_message = "The image service could not complete the operation"
+
+
+class ImageStorageUnavailableError(ImageStorageError, ServiceUnavailableError):
+    default_message = "Image uploads are not configured"

@@ -3,11 +3,16 @@ from datetime import timedelta
 
 from sqlalchemy.orm import Session
 
-from app.application.services import AuthorizationService, EventAccessPolicy
+from app.application.services import AuthorizationService, EventAccessPolicy, EventImagePolicy
 from app.application.use_cases.auth import (
     AuthenticateUserUseCase,
     LoginUserUseCase,
     RegisterUserUseCase,
+)
+from app.application.use_cases.event_images import (
+    AuthorizeEventImageUploadUseCase,
+    ConfirmEventImageUseCase,
+    DeleteEventImageUseCase,
 )
 from app.application.use_cases.events import (
     CreateEventUseCase,
@@ -29,9 +34,10 @@ from app.application.use_cases.sessions import (
     UpdateSessionUseCase,
 )
 from app.application.use_cases.speakers import ListSpeakersUseCase
-from app.domain.ports import PasswordHasher, TokenService
-from app.infrastructure.config import Settings
+from app.domain.ports import ImageStorage, PasswordHasher, TokenService
+from app.infrastructure.config import ConfigurationError, Settings
 from app.infrastructure.database.repositories import (
+    SqlAlchemyEventImageRepository,
     SqlAlchemyEventRepository,
     SqlAlchemyRegistrationRepository,
     SqlAlchemySeedRecordRepository,
@@ -41,6 +47,7 @@ from app.infrastructure.database.repositories import (
 )
 from app.infrastructure.database.session import create_database_engine, create_session_factory
 from app.infrastructure.database.unit_of_work import SqlAlchemyUnitOfWork
+from app.infrastructure.images import CloudinaryImageStorage, DisabledImageStorage
 from app.infrastructure.security import JwtTokenService, Sha256PasswordHasher
 
 
@@ -55,6 +62,13 @@ class Container:
         )
         self.authorization_service = AuthorizationService()
         self.event_access_policy = EventAccessPolicy(self.authorization_service)
+        self.image_storage: ImageStorage = _create_image_storage(settings)
+        try:
+            self.event_image_policy = EventImagePolicy(
+                folder=settings.cloudinary_folder, max_bytes=settings.event_image_max_bytes
+            )
+        except ValueError as error:
+            raise ConfigurationError(f"CLOUDINARY_FOLDER: {error}") from error
 
     def create_request_scope(self) -> "RequestScope":
         return RequestScope(self, self.session_factory())
@@ -119,6 +133,34 @@ class RequestScope:
         return DeleteEventUseCase(
             SqlAlchemyEventRepository(self._session),
             self._container.event_access_policy,
+            SqlAlchemyUnitOfWork(self._session),
+            self._container.image_storage,
+        )
+
+    def authorize_event_image_upload(self) -> AuthorizeEventImageUploadUseCase:
+        return AuthorizeEventImageUploadUseCase(
+            SqlAlchemyEventRepository(self._session),
+            self._container.event_access_policy,
+            self._container.image_storage,
+            self._container.event_image_policy,
+        )
+
+    def confirm_event_image(self) -> ConfirmEventImageUseCase:
+        return ConfirmEventImageUseCase(
+            SqlAlchemyEventRepository(self._session),
+            SqlAlchemyEventImageRepository(self._session),
+            self._container.event_access_policy,
+            self._container.image_storage,
+            self._container.event_image_policy,
+            SqlAlchemyUnitOfWork(self._session),
+        )
+
+    def delete_event_image(self) -> DeleteEventImageUseCase:
+        return DeleteEventImageUseCase(
+            SqlAlchemyEventRepository(self._session),
+            SqlAlchemyEventImageRepository(self._session),
+            self._container.event_access_policy,
+            self._container.image_storage,
             SqlAlchemyUnitOfWork(self._session),
         )
 
@@ -191,3 +233,11 @@ class RequestScope:
 
     def close(self) -> None:
         self._session.close()
+
+
+def _create_image_storage(settings: Settings) -> ImageStorage:
+    if not settings.cloudinary_enabled:
+        return DisabledImageStorage()
+    return CloudinaryImageStorage(
+        settings.cloudinary_cloud_name, settings.cloudinary_api_key, settings.cloudinary_api_secret
+    )

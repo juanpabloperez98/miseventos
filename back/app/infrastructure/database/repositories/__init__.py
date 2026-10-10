@@ -1,3 +1,6 @@
+from app.infrastructure.database.repositories.event_image_repository import (
+    SqlAlchemyEventImageRepository,
+)
 from app.infrastructure.database.repositories.event_repository import SqlAlchemyEventRepository
 from app.infrastructure.database.repositories.registration_repository import (
     SqlAlchemyRegistrationRepository,
@@ -14,6 +17,7 @@ from app.infrastructure.database.repositories.speaker_repository import (
 from app.infrastructure.database.repositories.user_repository import SqlAlchemyUserRepository
 
 __all__ = [
+    "SqlAlchemyEventImageRepository",
     "SqlAlchemyEventRepository",
     "SqlAlchemyRegistrationRepository",
     "SqlAlchemySeedRecordRepository",

@@ -45,6 +45,11 @@ export class EventsService {
     );
   }
 
+  /** Forgets the cached catalog pages, e.g. after a change of an event cover image. */
+  clearListCache(): void {
+    this.listCache.clear();
+  }
+
   get(id: number): Observable<EventModel> {
     return this.http.get<EventModel>(`${this.baseUrl}/${id}`);
   }

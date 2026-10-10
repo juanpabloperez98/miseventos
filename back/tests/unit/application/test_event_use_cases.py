@@ -25,6 +25,7 @@ from app.domain.exceptions import (
 )
 from tests.factories import EVENT_START, build_event
 from tests.unit.application.fakes import (
+    FakeImageStorage,
     InMemoryEventRepository,
     InMemoryRegistrationRepository,
     SpyUnitOfWork,
@@ -331,7 +332,7 @@ class TestDeleteEvent:
         policy: EventAccessPolicy,
         unit_of_work: SpyUnitOfWork,
     ) -> DeleteEventUseCase:
-        return DeleteEventUseCase(events, policy, unit_of_work)
+        return DeleteEventUseCase(events, policy, unit_of_work, FakeImageStorage())
 
     def test_draft_events_are_deleted(
         self,

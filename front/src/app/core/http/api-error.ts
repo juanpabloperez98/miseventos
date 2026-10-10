@@ -53,6 +53,15 @@ const KNOWN_MESSAGES: Record<string, string> = {
   'Session capacity cannot exceed the event capacity':
     'La capacidad de la sesión no puede superar la capacidad del evento.',
   'Session not found': 'La sesión no existe o no está disponible.',
+  'Event image not found': 'El evento no tiene imagen.',
+  'Image uploads are not configured': 'La carga de imágenes no está disponible en este momento.',
+  'The image service could not complete the operation':
+    'El servicio de imágenes no respondió. Inténtalo de nuevo más tarde.',
+  'The uploaded image could not be verified':
+    'No se pudo verificar la imagen subida. Inténtalo de nuevo.',
+  'The image was not uploaded for this event': 'La imagen no corresponde a este evento.',
+  'The uploaded file is not an allowed image format':
+    'El archivo no es una imagen JPG, PNG o WebP.',
 };
 
 /** Returns a user-facing message (in Spanish) describing the error. */
@@ -62,6 +71,12 @@ export function describeApiError(error: ApiError): string {
   }
   if (error.serverMessage?.startsWith('Cannot change event status')) {
     return KNOWN_MESSAGES['Invalid event status transition'];
+  }
+  if (error.serverMessage?.startsWith('Only these image types are allowed')) {
+    return 'Solo se admiten imágenes JPG, PNG o WebP.';
+  }
+  if (error.serverMessage?.startsWith('The image must not exceed')) {
+    return 'La imagen supera el tamaño máximo permitido.';
   }
   switch (error.status) {
     case 0:
