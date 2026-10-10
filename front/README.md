@@ -78,7 +78,8 @@ official image entrypoint (`envsubst`) when the container starts:
 | `HSTS_HEADER`      | `""` (disabled)       | `Strict-Transport-Security` value, sent only on HTTPS responses          |
 
 The published host port is `FRONTEND_HOST_PORT` (repository root `.env`, default `4200`, mapped to
-port 80 of the container). In `docker-compose.prod.yml` the frontend is the only public entry point.
+port 80 of the container). This container is part of the development stack only: in production the
+build (`npm run build` → `dist/mis-eventos/browser/`) is served by Nginx installed on the server.
 
 **Nginx responses** (`nginx/default.conf.template`, `nginx/security-headers.conf`):
 

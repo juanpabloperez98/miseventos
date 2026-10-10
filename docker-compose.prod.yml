@@ -1,36 +1,99 @@
-# Production overrides, applied on top of docker-compose.yml:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Production stack: Flask backend (Gunicorn) + PostgreSQL. The Angular frontend is not part of it:
+# its static build is served by Nginx on the host, which proxies /api/ to 127.0.0.1:5001.
 #
-# - Backend: FLASK_ENV=production → migrations + Gunicorn (no Flask dev server, no seeding),
-#   image without dev dependencies, no source mount, not published on the host.
-# - PostgreSQL: not published on the host; reachable only inside the Docker network.
-# - Frontend: the only public entry point (Nginx serves Angular and proxies /api/).
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml ps
+#
+# Standalone file (not an override of docker-compose.yml). Configuration:
+#   - `.env` next to this file (template: .env.example): POSTGRES_DB, POSTGRES_USER,
+#     POSTGRES_PASSWORD (required) and BACKEND_ENV_FILE (optional).
+#   - Backend settings: BACKEND_ENV_FILE, default ./back/.env (template: back/.env.example).
+#
+# On every start the backend validates its settings, runs `alembic upgrade head` and starts
+# Gunicorn (back/scripts/start.sh with FLASK_ENV=production).
+name: miseventos-prod
+
 services:
   postgres:
-    ports: !reset []
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    # No published ports: only the backend reaches the database, through the private network.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - database
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   backend:
-    # Separate tag so the production image does not replace the development one.
+    # Existing back/Dockerfile without dev dependencies; no source mount.
     image: miseventos-backend:prod
     build:
+      context: ./back
       args:
         INSTALL_DEV: "false"
+    env_file:
+      # Backend settings and secrets (JWT_SECRET_KEY, CORS_ORIGINS, CLOUDINARY_*...).
+      - ${BACKEND_ENV_FILE:-./back/.env}
     environment:
+      # These values take precedence over the env_file.
       FLASK_ENV: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       # Seeding is forbidden in production: forced off here, and the backend refuses to start
       # (ConfigurationError) if any of these is enabled in a production environment.
       SEED_ADMIN_ENABLED: "false"
       SEED_ORGANIZER_ENABLED: "false"
       SEED_ATTENDEE_ENABLED: "false"
       SEED_DEMO_DATA_ENABLED: "false"
-    ports: !reset []
-    volumes: !reset []
+    ports:
+      # Loopback only: reachable by the host Nginx, never from the internet. Fixed host port 5001
+      # (5000 is taken by another project on the server); Gunicorn listens on 5000 in the container.
+      # BACKEND_HOST_PORT is not used here: it is the development port shared with docker-compose.yml.
+      - "127.0.0.1:5001:5000"
+    healthcheck:
+      # Same check as back/Dockerfile: GET /health inside the container.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Settings validation and migrations run before Gunicorn starts.
+      start_period: 40s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - database
+      # Outbound access (Cloudinary API) and the published port need a non-internal network.
+      - egress
+    logging: *logging
 
+networks:
+  # Private: no route to the outside world. Only postgres and backend are attached.
+  database:
+    internal: true
+  egress:
+    driver: bridge
 
-  frontend:
-    environment:
-      # HTTPS behind an external TLS proxy that sets X-Forwarded-Proto (see README "HTTPS").
-      # 1 = redirect requests the proxy reports as plain HTTP; never affects internal traffic.
-      HTTPS_REDIRECT: "0"
-      # e.g. "max-age=300" once HTTPS works; sent only on HTTPS responses. Empty = disabled.
-      HSTS_HEADER: ""
+volumes:
+  # Persistent data. `docker compose down` keeps it; only `down -v` or `docker volume rm` delete it.
+  postgres_data:

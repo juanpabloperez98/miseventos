@@ -545,5 +545,5 @@ POST /api/speakers, PUT/DELETE /api/speakers/{id}
   `miseventos.events.v1`. Passwords, tokens and secrets are never logged.
 - **One image, two modes**: by default the container runs migrations, idempotent seeding and the
   Flask development server with hot reload. `docker-compose.prod.yml` switches to
-  `FLASK_ENV=production`: migrations and Gunicorn, no seeding, no dev dependencies, no source mount
-  and no published port (the API is reached through the frontend's Nginx proxy).
+  `FLASK_ENV=production`: migrations and Gunicorn, no seeding, no dev dependencies, no source mount,
+  and the port is published on `127.0.0.1` only (the API is reached through an Nginx on the host).

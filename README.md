@@ -22,7 +22,7 @@ Angular ([`front/`](front/README.md)) y PostgreSQL, orquestados con Docker Compo
 | Archivo                                                 | Contenido                                                                    |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `docker-compose.yml`                                    | Stack completo en modo **desarrollo** (configuración por defecto)            |
-| `docker-compose.prod.yml`                               | Override de **producción**, se aplica encima del anterior                    |
+| `docker-compose.prod.yml`                               | **Producción**: solo backend (Gunicorn) + PostgreSQL                         |
 | `back/Dockerfile`, `back/scripts/start.sh`              | Imagen del backend: migraciones → seeder (solo desarrollo) → servidor        |
 | `front/Dockerfile`, `front/nginx/default.conf.template` | Build de Angular con Node y servido con Nginx (fallback SPA y proxy `/api/`) |
 
@@ -83,20 +83,57 @@ sección).
 
 ### Producción
 
+`docker-compose.prod.yml` es independiente (**no** se aplica encima de `docker-compose.yml`) y solo
+ejecuta el backend con Gunicorn y PostgreSQL. El frontend no forma parte de él: su build estático lo
+sirve un Nginx instalado en el servidor, que reenvía `/api/` a `127.0.0.1:5001`
+(configuración del servidor fuera de este repositorio).
+
+Configuración en el servidor (archivos ignorados por Git):
+
+| Archivo                                      | Variables                                                                                                                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.env` (raíz, plantilla `.env.example`)      | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (obligatorias: Compose falla si faltan); `BACKEND_ENV_FILE` opcional. El puerto es fijo (`127.0.0.1:5001`) |
+| `back/.env` (o el de `BACKEND_ENV_FILE`)     | `JWT_SECRET_KEY` (obligatoria), `CORS_ORIGINS`, `JWT_EXPIRATION_MINUTES`, `LOG_LEVEL`, `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `CLOUDINARY_*`, `EVENT_IMAGE_MAX_BYTES` |
+
+- Sustituye todos los valores de ejemplo (`change-me`, `replace-with-...`). `POSTGRES_PASSWORD` se
+  inserta sin codificar en `DATABASE_URL`: usa solo letras, dígitos, `-` y `_`
+  (`python3 -c "import secrets; print(secrets.token_urlsafe(32))"`).
+- `docker-compose.prod.yml` fija `FLASK_ENV=production`, `DATABASE_URL` y `SEED_*_ENABLED=false`, por
+  encima de lo que diga `back/.env`.
+- Si el frontend se sirve en el mismo dominio que `/api/`, deja `CORS_ORIGINS` vacío.
+
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml config --quiet     # valida archivo y variables
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml ps                 # ambos servicios (healthy)
+curl -fsS http://127.0.0.1:5001/health
 ```
+
+**Migraciones.** En cada arranque, `back/scripts/start.sh` valida la configuración, ejecuta
+`alembic upgrade head` (solo hacia delante) y después arranca Gunicorn; en el primer despliegue crea
+el esquema. Para una actualización que incluya migraciones, haz antes un backup de la base de datos
+y aplícalas de forma explícita antes de sustituir el backend:
+
+```bash
+docker compose -f docker-compose.prod.yml build backend
+docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+docker compose -f docker-compose.prod.yml up -d backend
+docker compose -f docker-compose.prod.yml exec backend alembic current
+```
+
+Si una migración falla, PostgreSQL revierte la transacción y el backend en marcha no cambia; si
+fallara durante un arranque, el contenedor se reiniciaría en bucle hasta corregirla (ver
+`docker compose -f docker-compose.prod.yml logs backend`).
 
 Diferencias respecto a desarrollo:
 
 |                    | Desarrollo                                                  | Producción                                                                                         |
 | ------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Backend            | Flask `--debug`, código montado, dependencias de desarrollo | Gunicorn, imagen `miseventos-backend:prod` sin dependencias de desarrollo ni código montado        |
-| `FLASK_ENV`        | El de `back/.env`                                           | `production` (forzado por el override)                                                             |
+| `FLASK_ENV`        | El de `back/.env`                                           | `production` (forzado por `docker-compose.prod.yml`)                                               |
 | Seeder             | Se ejecuta en cada arranque (idempotente)                   | Prohibido: `SEED_*_ENABLED` forzados a `false` y el backend no arranca si alguno vale `true`       |
 | `JWT_SECRET_KEY`   | Mínimo 32 caracteres                                        | Además: sin marcadores de ejemplo y con al menos 16 caracteres distintos, o el backend no arranca  |
-| Puertos publicados | 4200, 5000, 5432                                            | Solo 4200: la API se usa a través de `/api` y PostgreSQL solo es accesible dentro de la red Docker |
+| Puertos publicados | 4200, 5000, 5432                                            | Solo 5000 en `127.0.0.1` (para el Nginx del host); PostgreSQL solo es accesible en una red interna |
 
 Ver [Seguridad en producción](#seguridad-en-producción) antes de un despliegue real.
 
@@ -133,13 +170,17 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 ### HTTPS
 
-El stack no gestiona certificados: está preparado para un **terminador TLS externo** (proxy inverso o
+En producción, HTTPS lo termina el Nginx del servidor, que se configura fuera de este repositorio.
+
+Lo que sigue aplica al frontend **dockerizado** (`front/Dockerfile`), que ahora solo forma parte del
+stack de desarrollo, si se publica detrás de un **terminador TLS externo** (proxy inverso o
 balanceador del proveedor) delante del puerto del frontend.
 
 1. El proxy externo termina TLS, reenvía a `http://<servidor>:${FRONTEND_HOST_PORT}` y fija la
    cabecera `X-Forwarded-Proto` (sobrescribiendo la del cliente).
 2. Nginx conserva ese `X-Forwarded-Proto` al reenviar `/api/` al backend.
-3. Variables del servicio `frontend` (en `docker-compose.prod.yml`, bloque `environment`):
+3. Variables del contenedor del frontend (`ENV` de `front/Dockerfile`, sobrescribibles en el bloque
+   `environment` del servicio `frontend`):
 
    | Variable           | Efecto                                                                                                                                                                                                    | Por defecto         |
    | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
@@ -216,8 +257,8 @@ docker compose stop                       # detener sin eliminar contenedores
 docker compose down                       # eliminar contenedores y red; los datos se conservan
 ```
 
-Añade `-f docker-compose.yml -f docker-compose.prod.yml` a cada comando para operar sobre el stack
-de producción.
+Para el stack de producción, usa `docker compose -f docker-compose.prod.yml` en cada comando; su
+volumen es `miseventos-prod_postgres_data`.
 
 Los datos de PostgreSQL viven en el volumen nombrado `miseventos_postgres_data` y sobreviven a
 `stop`, `down` y a la recreación de contenedores. **`docker compose down -v` borra el volumen y todos
